@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using Photon.Pun;
+using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using System.Collections;
-public abstract class MovementControllerBase : MonoBehaviour
+public abstract class MovementControllerBase : MonoBehaviourPun
 {
     [Header("Movement (base)")]
     public float moveSpeed = 3f;

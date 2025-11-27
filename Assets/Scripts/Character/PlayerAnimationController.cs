@@ -1,10 +1,13 @@
-﻿using System.Collections;
+﻿using Photon.Pun;
+using Photon.Realtime;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using static PlayerAnimationController;
 
-public class PlayerAnimationController : MonoBehaviour
+public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservable
 {
     [System.Serializable]
     public struct PartRendererPair
@@ -84,6 +87,7 @@ public class PlayerAnimationController : MonoBehaviour
 
 
         LoadSprites();
+        ApplyAppearanceFromProperties();
     }
 
     private void LateUpdate()
@@ -99,22 +103,26 @@ public class PlayerAnimationController : MonoBehaviour
             LoadPart(kvp.Key, kvp.Value);
         }
     }
-
     public void SetAnimation(Direction dir, State state)
     {
-        // Always log entry to see how often/caller
-        var caller = new System.Diagnostics.StackTrace().GetFrame(1).GetMethod().Name;
+        if (!photonView.IsMine) return;
 
-        if (dir != currentDir || state != currentState)
+        photonView.RPC("RPC_SetAnim", RpcTarget.All, (int)dir, (int)state);
+    }
+
+    [PunRPC]
+    void RPC_SetAnim(int dir, int state)
+    {
+        if (dir != (int)currentDir || state != (int)currentState)
         {
 
-            if (dir == Direction.Up) SetDirectionUp(true);
+            if (dir == (int)Direction.Up) SetDirectionUp(true);
             else SetDirectionUp(false);
 
-            transform.rotation = (dir == Direction.Right) ? Quaternion.Euler(0, 180f, 0) : Quaternion.identity;
+            transform.rotation = (dir == (int)Direction.Right) ? Quaternion.Euler(0, 180f, 0) : Quaternion.identity;
 
-            currentDir = dir;
-            currentState = state;
+            currentDir = (Direction)dir;
+            currentState = (State)state;
             currentFrame = 0;
             timer = 0;
         }
@@ -240,10 +248,21 @@ public class PlayerAnimationController : MonoBehaviour
         SetAttackAnimation(false);
     }
 
+    public void SetPart(CharacterPart part, int variant)
+    {
+        // Local change
+        LoadPart(part, variant);
+
+        // Sync to others
+        ExitGames.Client.Photon.Hashtable hash = new ExitGames.Client.Photon.Hashtable();
+        hash[part.ToString()] = variant;
+
+        PhotonNetwork.LocalPlayer.SetCustomProperties(hash);
+    }
 
 
 
-    public void LoadPart(CharacterPart part, int variant)
+    private void LoadPart(CharacterPart part, int variant)
     {
         partVariants[part] = variant;
         switch (part)
@@ -294,5 +313,135 @@ public class PlayerAnimationController : MonoBehaviour
                 break;
         }
     }
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            // SEND animation state
+            stream.SendNext((int)currentDir);
+            stream.SendNext((int)currentState);
+            stream.SendNext((int)currentEyeState);
+
+            // SEND equipment variants
+            // Gửi count rồi gửi từng part
+            stream.SendNext(partVariants.Count);
+            foreach (var kvp in partVariants)
+            {
+                stream.SendNext((int)kvp.Key);
+                stream.SendNext(kvp.Value);
+            }
+        }
+        else
+        {
+            // RECEIVE animation state
+            currentDir = (Direction)(int)stream.ReceiveNext();
+            currentState = (State)(int)stream.ReceiveNext();
+            currentEyeState = (EyeState)(int)stream.ReceiveNext();
+
+            // RECEIVE equipment variants
+            int count = (int)stream.ReceiveNext();
+
+            for (int i = 0; i < count; i++)
+            {
+                CharacterPart part = (CharacterPart)(int)stream.ReceiveNext();
+                int variant = (int)stream.ReceiveNext();
+
+                if (partVariants[part] != variant)
+                {
+                    partVariants[part] = variant;
+                    LoadPart(part, variant);
+                }
+            }
+        }
+    }
+
+    private void ApplyAppearanceFromProperties()
+    {
+        var props = photonView.Owner.CustomProperties;
+
+        foreach (DictionaryEntry entry in props)
+        {
+            if (Enum.TryParse<CharacterPart>(entry.Key.ToString(), out CharacterPart part))
+            {
+                int variant = (int)entry.Value;
+                partVariants[part] = variant;
+                LoadPart(part, variant);
+            }
+        }
+    }
+
+
+    public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+    {
+        if (targetPlayer != photonView.Owner)
+            return;
+
+        foreach (DictionaryEntry entry in changedProps)
+        {
+            string keyStr = entry.Key.ToString();
+
+            if (!Enum.TryParse<CharacterPart>(keyStr, out CharacterPart part))
+                continue;
+
+            object rawVal = entry.Value;
+            int variant;
+            if (!TryGetIntFromObject(rawVal, out variant))
+            {
+                Debug.LogWarning($"PlayerAppearance: couldn't parse variant for part {part} (raw type: {rawVal?.GetType()}). Skipping.");
+                continue;
+            }
+
+            // nếu chưa có key thì thêm, hoặc nếu khác thì cập nhật
+            if (!partVariants.ContainsKey(part) || partVariants[part] != variant)
+            {
+                partVariants[part] = variant;
+                LoadPart(part, variant);
+            }
+        }
+    }
+
+    // helper an toàn để chuyển object -> int
+    private bool TryGetIntFromObject(object o, out int result)
+    {
+        result = 0;
+        if (o == null) return false;
+
+        switch (o)
+        {
+            case int i:
+                result = i;
+                return true;
+            case long l:
+                result = (int)l;
+                return true;
+            case short s:
+                result = s;
+                return true;
+            case byte b:
+                result = b;
+                return true;
+            case float f:
+                result = Mathf.RoundToInt(f);
+                return true;
+            case double d:
+                result = (int)d;
+                return true;
+            case string str when int.TryParse(str, out var parsed):
+                result = parsed;
+                return true;
+            default:
+                try
+                {
+                    // fallback: try Convert (thường xử được boxed numeric types)
+                    result = System.Convert.ToInt32(o);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+        }
+    }
+
 
 }

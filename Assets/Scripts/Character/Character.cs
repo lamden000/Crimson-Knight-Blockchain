@@ -1,4 +1,3 @@
-using Assets.Scripts.Networking;
 using Assets.Scripts.Utils;
 using System;
 using UnityEngine;
@@ -52,11 +51,6 @@ public class Character : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Z))
-        {
-            Session.Connect();
-        }
-
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);

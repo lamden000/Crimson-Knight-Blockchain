@@ -1,6 +1,6 @@
-﻿using Assets.Scripts.Networking;
-using Assets.Scripts.Utils;
+﻿using Assets.Scripts.Utils;
 using NavMeshPlus.Components;
+using Photon.Pun;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -45,11 +45,13 @@ public class PlayerMovementController : MovementControllerBase
 
     private void OnMove(InputValue input)
     {
+        if (!photonView.IsMine) return;
         moveInput = input.Get<Vector2>();
     }
 
     private void Update()
     {
+        if (!photonView.IsMine) return;
         if (!GameManager.Instance.CanPlayerMove)
         {
             desiredVelocity = Vector2.zero;
@@ -351,7 +353,6 @@ public class PlayerMovementController : MovementControllerBase
             if (SystemUtil.CurrentTimeMillis() - timeStartSendMove > 2000)
             {
                 timeStartSendMove = SystemUtil.CurrentTimeMillis();
-                RequestManager.PlayerMove((int)this.transform.position.x, (int)this.transform.position.y);
             }
         }
         else

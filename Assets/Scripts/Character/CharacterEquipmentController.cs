@@ -1,6 +1,7 @@
-﻿using UnityEngine;
-using UnityEngine.UI;
+﻿using Photon.Pun;
 using TMPro;
+using UnityEngine;
+using UnityEngine.UI;
 
 public class CharacterEquipmentController : MonoBehaviour
 {
@@ -13,9 +14,9 @@ public class CharacterEquipmentController : MonoBehaviour
     public TMP_InputField hatInput;
     public TMP_InputField eyesInput;
 
-    public Character character;
+    private Character character;
 
-    public PlayerAnimationController characterLoader; // script cũ của cậu để load sprites
+    private PlayerAnimationController characterLoader; 
 
     void Update()
     {
@@ -26,6 +27,14 @@ public class CharacterEquipmentController : MonoBehaviour
         }
     }
 
+    public void AssignLocalPlayer(PlayerAnimationController anim)
+    {
+        characterLoader = anim;
+        character = anim.GetComponent<Character>();
+
+        Debug.Log("UI now linked to local player.");
+    }
+
     void ApplyVariants()
     {
         // Body
@@ -33,8 +42,8 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(outfitInput.text, out int bodyVariant))
             {
-                characterLoader.LoadPart(CharacterPart.Body, bodyVariant);
-                characterLoader.LoadPart(CharacterPart.Legs, bodyVariant);
+                characterLoader.SetPart(CharacterPart.Body, bodyVariant);
+                characterLoader.SetPart(CharacterPart.Legs, bodyVariant);
             }
         }
 
@@ -43,7 +52,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(hairInput.text, out int hairVariant))
             {
-                characterLoader.LoadPart(CharacterPart.Hair, hairVariant);
+                characterLoader.SetPart(CharacterPart.Hair, hairVariant);
             }
         }
 
@@ -51,7 +60,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(headInput.text, out int headVariant))
             {
-                characterLoader.LoadPart(CharacterPart.Head, headVariant);
+                characterLoader.SetPart(CharacterPart.Head, headVariant);
             }
         }
 
@@ -59,7 +68,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(wingInput.text, out int wingVariant))
             {
-                characterLoader.LoadPart(CharacterPart.Wings, wingVariant);
+                characterLoader.SetPart(CharacterPart.Wings, wingVariant);
             }
         }
 
@@ -67,7 +76,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(weaponInput.text, out int weaponVariant))
             {
-                characterLoader.LoadPart(character.getWeaponType(), weaponVariant);
+                characterLoader.SetPart(character.getWeaponType(), weaponVariant);
             }
         }
 
@@ -75,7 +84,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(hatInput.text, out int hatVariant))
             {
-                characterLoader.LoadPart(CharacterPart.Hat, hatVariant);
+                characterLoader.SetPart(CharacterPart.Hat, hatVariant);
             }
         }
 
@@ -83,7 +92,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(eyesInput.text, out int eyesVariant))
             {
-                characterLoader.LoadPart(CharacterPart.Eyes, eyesVariant);
+                characterLoader.SetPart(CharacterPart.Eyes, eyesVariant);
             }
         }
     }

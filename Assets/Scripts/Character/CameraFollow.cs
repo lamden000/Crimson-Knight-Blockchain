@@ -22,6 +22,11 @@ public class CameraFollow : MonoBehaviour
         this.orthographicSize = orthographicSize;
     }
 
+    public void SetTarget(Transform newTarget)
+    {
+        target = newTarget;
+    }
+
     public void InitializeBounds()
     {
         if (cam == null)

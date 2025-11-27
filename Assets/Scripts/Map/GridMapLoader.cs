@@ -1,5 +1,6 @@
 ﻿using NavMeshPlus.Components;
 using NavMeshPlus.Extensions;
+using Photon.Pun;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,7 +30,8 @@ public class GridmapLoader : MonoBehaviour
     public bool loadInEditMode = false;
     private Pathfinder pathfinder;
     private TiledMap map;
-    private string currentOrigin = "Default";
+    [HideInInspector]
+    public string currentOrigin = "Default";
     public bool drawGizmo=false;
     public List<GameObject> spawnPoints = new List<GameObject>();
 
@@ -37,10 +39,6 @@ public class GridmapLoader : MonoBehaviour
     {
         pathfinder=Pathfinder.Instance;
         transform.position = Vector3.zero;
-        if (Application.isPlaying)
-        {
-            LoadMapByName(jsonFileName,currentOrigin);
-        }
     }
 
     private void Update()
@@ -106,9 +104,6 @@ public class GridmapLoader : MonoBehaviour
             LoadTileLayers();
 
             LoadObjectLayers();
-            // After objects (including spawn points) are created, resolve origin -> player spawn position
-            ResolveSpawnOrigin(currentOrigin);
-            this.jsonFileName = jsonFileName;
         }
     }
 
@@ -340,7 +335,6 @@ public class GridmapLoader : MonoBehaviour
 
         // drop loaded map reference
         map = null;
-
         // Note: Pathfinder grid will be replaced when a new map is loaded.
         Debug.Log("GridmapLoader: Unloaded current map.");
     }
@@ -348,7 +342,10 @@ public class GridmapLoader : MonoBehaviour
     // Public helper to unload current map then load a different map by json filename (e.g. \"Map01.json\").
     public void LoadMapByName(String newJsonFileName, string origin)
     {
-        currentOrigin = origin; 
+        currentOrigin = origin;
+        this.jsonFileName = newJsonFileName;
+        if (PhotonNetwork.InRoom)
+            PhotonNetwork.LeaveRoom();
         if (!newJsonFileName.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             newJsonFileName = newJsonFileName + ".json";
 
@@ -374,10 +371,10 @@ public class GridmapLoader : MonoBehaviour
         // Only after overlay reached alpha=1 do we unload the current map so the player
         // never sees intermediate unload artifacts.
         UnloadCurrentMap();
-
         // Now load the map JSON (this will recreate tiles, objects, etc.)
         yield return StartCoroutine(LoadJsonFile(newJsonFileName));
 
+        yield return new WaitUntil(() => NetworkManager.Instance.playerSpawned);
         // Fade overlay out and hide
         if (loadingOverlay != null)
         {
@@ -581,37 +578,19 @@ public class GridmapLoader : MonoBehaviour
         departComp.direction = direction.ToLowerInvariant();
     }
 
-    private void ResolveSpawnOrigin(string origin)
+    public Transform FindSpawnPoint(string origin)
     {
-        // If no origin provided, default to "Default" spawn point
-        string originToFind = string.IsNullOrEmpty(origin) ? "Default" : origin;
+        string target = string.IsNullOrEmpty(origin) ? "Default" : origin;
 
-        GameObject found = spawnPoints.Find(s => s != null && s.name == originToFind);
+        GameObject found = spawnPoints.Find(s => s != null && s.name == target);
+
         if (found != null)
-        {
-            var player = GameObject.FindGameObjectWithTag("Player");
-            if (player != null)
-            {
-                player.transform.position = found.transform.position;
-                // snap camera to player immediately if CameraFollow exists
-                if (Camera.main != null)
-                {
-                    var camFollow = Camera.main.GetComponent<CameraFollow>();
-                    if (camFollow != null)
-                        camFollow.SnapToTargetImmediate();
-                }
-            }
-            else
-            {
-                Debug.LogWarning("ResolveSpawnOrigin: Player GameObject with tag 'Player' not found.");
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"Spawn origin '{originToFind}' not found in map spawn points.");
-        }
+            return found.transform;
+
+        Debug.LogWarning($"Spawn origin '{target}' not found. Using fallback.");
+        return spawnPoints[0].transform; // fallback
     }
-void CreateColliderBox(TiledObject obj, bool isWater,Transform colliderParent)
+    void CreateColliderBox(TiledObject obj, bool isWater,Transform colliderParent)
     {
         string name = isWater? "WaterBox":"ColliderBox";
         GameObject go = new GameObject(name);
