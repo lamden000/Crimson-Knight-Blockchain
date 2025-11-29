@@ -32,7 +32,6 @@ public class CharacterEquipmentController : MonoBehaviour
         characterLoader = anim;
         character = anim.GetComponent<Character>();
 
-        Debug.Log("UI now linked to local player.");
     }
 
     void ApplyVariants()
@@ -76,7 +75,7 @@ public class CharacterEquipmentController : MonoBehaviour
         {
             if (int.TryParse(weaponInput.text, out int weaponVariant))
             {
-                characterLoader.SetPart(character.getWeaponType(), weaponVariant);
+                characterLoader.SetPart(character.GetWeaponType(), weaponVariant);
             }
         }
 

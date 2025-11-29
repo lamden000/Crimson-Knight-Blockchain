@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Photon.Pun;
+using System.Collections.Generic;
 using UnityEngine;
 
 [RequireComponent(typeof(Monster))]
@@ -14,17 +15,21 @@ public class MonsterAnimationController : MonoBehaviour
     private float timer;
     private int currentFrame;
 
+    private MonsterState syncedState;
 
-    void Start()
+    private void Awake()
     {
         monster = GetComponent<Monster>();
         spriteRenderer = GetComponent<SpriteRenderer>();
-        _name = monster.GetName();
         boxCollider = GetComponent<BoxCollider2D>();
-        database=MonsterSpriteDatabase.Instance;
+        database = MonsterSpriteDatabase.Instance;
+    }
 
+    public void InitializeMonster()
+    {
+        syncedState = monster.currentState;
+        _name = monster.monsterName;
         database.LoadSprites(_name);
-
         AdjustColliderToSprite();
     }
 
@@ -42,7 +47,6 @@ public class MonsterAnimationController : MonoBehaviour
 
         boxCollider.offset = spriteBounds.center;
     }
-
     void Update()
     {
         PlayAnimation(monster.currentState);
@@ -62,7 +66,7 @@ public class MonsterAnimationController : MonoBehaviour
 
         List<Sprite> frames = null;
 
-        frames = database.GetSprites(_name,state);
+        frames = database.GetSprites(_name, state);
 
         if ((frames == null || frames.Count == 0))
         {

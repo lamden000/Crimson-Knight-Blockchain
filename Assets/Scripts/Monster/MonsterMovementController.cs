@@ -1,7 +1,9 @@
-﻿using UnityEngine;
+﻿using Photon.Pun;
+using Photon.Realtime;
 using System.Collections;
+using UnityEngine;
 
-public class MonsterMovementController : MovementControllerBase
+public class MonsterMovementController : MovementControllerBase, IInRoomCallbacks
 {
     [Header("Patrol Area Settings")]
     public int R = 5;
@@ -20,6 +22,7 @@ public class MonsterMovementController : MovementControllerBase
 
     private TileNode centerNode;
     private Monster enemy;
+    private MonsterSync monsterSync;
     private int minX, maxX, minZ, maxZ;
 
     // dùng currentPath (List<Vector3>) và pathIndex từ base
@@ -28,21 +31,69 @@ public class MonsterMovementController : MovementControllerBase
 
     private Coroutine patrolCoroutine;
 
+
+    protected void OnEnable()
+    {
+        PhotonNetwork.AddCallbackTarget(this);
+    }
+
+    protected void OnDisable()
+    {
+        PhotonNetwork.RemoveCallbackTarget(this);
+    }
+
     override protected void Start()
     {
         base.Start();
+
+        monsterSync = GetComponent<MonsterSync>();
         enemy = GetComponent<Monster>();
+
+        // If not master, do not initialize AI/pathfinder — client only interpolates
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
         if (!EnsurePathfinder())
         {
             Debug.LogError("Pathfinder Instance chưa có. Kẻ địch không thể tuần tra.");
             enabled = false;
             return;
         }
-        StartCoroutine(WaitForPathfinderInitialization());
+
+        BecomeMasterControlled();
     }
 
+    protected override void FixedUpdate()
+    {
+        // Movement & physics must be driven only by MasterClient
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        base.FixedUpdate();
+
+        // sync velocity so clients can interpolate
+        if (monsterSync != null)
+            monsterSync.SetVelocity(desiredVelocity);
+    }
+
+    void Update()
+    {
+        // AI Update only for MasterClient
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
+        if (isPatrolling && followCoroutine == null && currentPath != null && pathIndex < currentPath.Count)
+        {
+            MoveAlongPath();
+        }
+    }
+
+    // --- AI control methods (only master should call these) ---
     public void StartChase(Transform target)
     {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
         StopPatrol();
         playerTarget = target;
         chaseFailCount = 0;
@@ -53,6 +104,9 @@ public class MonsterMovementController : MovementControllerBase
 
     public void HandleGetHit(Transform attacker)
     {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
         StopPatrol();
         if (chaseCoroutine != null) StopCoroutine(chaseCoroutine);
 
@@ -65,6 +119,9 @@ public class MonsterMovementController : MovementControllerBase
 
     private IEnumerator GetHitDelay(Transform attacker)
     {
+        if (!PhotonNetwork.IsMasterClient)
+            yield break;
+
         if (isDebugging) Debug.Log($"[GetHitDelay] Bắt đầu chờ animation GetHit ({animationDelay}s).");
         yield return new WaitForSeconds(animationDelay);
         StopMoving();
@@ -82,6 +139,9 @@ public class MonsterMovementController : MovementControllerBase
 
     private IEnumerator ChaseRoutine()
     {
+        if (!PhotonNetwork.IsMasterClient)
+            yield break;
+
         if (isDebugging) Debug.Log("[ChaseRoutine] Bắt đầu vòng lặp truy đuổi.");
 
         while (playerTarget != null && enemy.currentState != MonsterState.GetHit)
@@ -133,6 +193,9 @@ public class MonsterMovementController : MovementControllerBase
 
     private IEnumerator AttackAction()
     {
+        if (!PhotonNetwork.IsMasterClient)
+            yield break;
+
         if (isDebugging) Debug.Log("[AttackAction] Thiết lập Attack. Cooldown BẮT ĐẦU.");
 
         ClearPath();
@@ -143,7 +206,8 @@ public class MonsterMovementController : MovementControllerBase
 
         yield return new WaitForSeconds(animationDelay);
 
-        playerTarget.gameObject.GetComponent<Character>().TakeDamage(enemy.damage,gameObject);
+        // Damage must be handled via RPCs to ensure authoritative updates (Master does actual damage).
+        playerTarget.gameObject.GetComponent<Character>().TakeDamage(enemy.damage, gameObject);
 
         StopMoving();
 
@@ -151,15 +215,17 @@ public class MonsterMovementController : MovementControllerBase
         isAttackOnCooldown = false;
     }
 
-    // NOTE: Uses MovementControllerBase.MoveToTarget coroutine now.
-
     IEnumerator WaitForPathfinderInitialization()
     {
+        // Ensure only master runs this initialization coroutine
+        if (!PhotonNetwork.IsMasterClient)
+            yield break;
+
         while (!Pathfinder.IsInitialized)
         {
             yield return null;
         }
-        
+
         centerNode = pathfinder.GetTileFromWorld(transform.position);
         if (centerNode == null)
         {
@@ -172,8 +238,20 @@ public class MonsterMovementController : MovementControllerBase
         patrolCoroutine = StartCoroutine(PatrolRoutine());
     }
 
+    void CalculatePatrolBounds() { 
+        int centerX = centerNode.gridPos.x; 
+        int centerZ = centerNode.gridPos.y; minX = centerX;
+        minZ = centerZ; maxX = centerX + R - 1; 
+        maxZ = centerZ + R - 1; 
+        if (isDebugging) 
+            Debug.Log($". Center Node: {centerX},{centerZ};" +$" Khu vực tuần tra {R}x{R} đã thiết lập: X [{minX}, {maxX}], Z [{minZ}, {maxZ}]. Tổng số tile: {R * R}");
+    }
+
     private IEnumerator ReturnToCenterAndResumePatrol()
     {
+        if (!PhotonNetwork.IsMasterClient)
+            yield break;
+
         if (isDebugging) Debug.Log("[Chase] Quá nhiều lần không tìm thấy đường. Quay trở lại tâm để tuần tra.");
 
         if (chaseCoroutine != null)
@@ -198,6 +276,9 @@ public class MonsterMovementController : MovementControllerBase
 
     public void StopPatrol()
     {
+        if (!PhotonNetwork.IsMasterClient)
+            return;
+
         if (!isPatrolling) return;
 
         isPatrolling = false;
@@ -211,71 +292,37 @@ public class MonsterMovementController : MovementControllerBase
         if (isDebugging) Debug.Log("[Patrol] Tuần tra đã bị ngắt.");
     }
 
-    void Update()
-    {
-        // Only perform frame-based MoveAlongPath when not already running the follow coroutine.
-        if (isPatrolling && followCoroutine == null && currentPath != null && pathIndex < currentPath.Count)
-        {
-            MoveAlongPath();
-        }
-    }
-
-    void CalculatePatrolBounds()
-    {
-        int centerX = centerNode.gridPos.x;
-        int centerZ = centerNode.gridPos.y;
-        minX = centerX;
-        minZ = centerZ;
-
-        maxX = centerX + R - 1;
-        maxZ = centerZ + R - 1;
-
-        if (isDebugging)
-            Debug.Log($". Center Node: {centerX},{centerZ}; Khu vực tuần tra {R}x{R} đã thiết lập: X [{minX}, {maxX}], Z [{minZ}, {maxZ}]. Tổng số tile: {R * R}");
-    }
-
-    TileNode GetRandomPatrolNode()
-    {
-        TileNode targetNode = null;
-        int maxAttempts = 50;
-        int attempt = 0;
-
-        while (targetNode == null && attempt < maxAttempts)
-        {
-            int randomX = Random.Range(minX, maxX + 1);
-            int randomZ = Random.Range(minZ, maxZ + 1);
-
-            TileNode checkNode = pathfinder.GetTile(randomZ, randomX);
-
-            if (checkNode != null && checkNode.walkable)
-            {
-                if (checkNode != pathfinder.GetTileFromWorld(transform.position))
-                {
-                    targetNode = checkNode;
-                }
-            }
-            attempt++;
-        }
-
-        if (attempt >= maxAttempts)
-        {
-            if (isDebugging)
-                Debug.LogWarning("Không tìm được node tuần tra ngẫu nhiên hợp lệ sau nhiều lần thử.");
-        }
-
-        return targetNode;
-    }
-
     private TileNode debugEndNote;
-     IEnumerator PatrolRoutine()
+    TileNode GetRandomPatrolNode() { 
+        TileNode targetNode = null;
+        int maxAttempts = 50; 
+        int attempt = 0; 
+        while (targetNode == null && attempt < maxAttempts){
+            int randomX = Random.Range(minX, maxX + 1); 
+            int randomZ = Random.Range(minZ, maxZ + 1); 
+            TileNode checkNode = pathfinder.GetTile(randomZ, randomX); 
+            if (checkNode != null && checkNode.walkable) { 
+                if (checkNode != pathfinder.GetTileFromWorld(transform.position)) { 
+                    targetNode = checkNode; 
+                } 
+            } attempt++; 
+        } 
+        if (attempt >= maxAttempts) 
+            { if (isDebugging) Debug.LogWarning("Không tìm được node tuần tra ngẫu nhiên hợp lệ sau nhiều lần thử."); } 
+        return targetNode; 
+    }
+    IEnumerator PatrolRoutine()
     {
+        if (!PhotonNetwork.IsMasterClient)
+            yield break;
+
         isPatrolling = true;
         int failCount = 0; // số lần liên tiếp không tìm được đường
 
         while (isPatrolling)
         {
             TileNode endNode = GetRandomPatrolNode();
-                debugEndNote = endNode;
+            debugEndNote = endNode;
 
             if (endNode == null)
             {
@@ -310,8 +357,8 @@ public class MonsterMovementController : MovementControllerBase
                     if (isDebugging)
                         Debug.LogWarning("[PatrolRoutine] Thất bại nhiều lần. Random lại node mới ngay lập tức.");
 
-                    failCount = 0; 
-                    yield return null; 
+                    failCount = 0;
+                    yield return null;
                     continue;
                 }
 
@@ -321,14 +368,13 @@ public class MonsterMovementController : MovementControllerBase
                 continue;
             }
 
-        
             failCount = 0;
             if (isDebugging)
                 Debug.Log($"Bắt đầu di chuyển ngẫu nhiên đến node: {endNode.gridPos}");
 
             enemy.SetState(MonsterState.Walk);
 
-            followCoroutine = StartCoroutine(FollowPath(arrivalDistance,0));
+            followCoroutine = StartCoroutine(FollowPath(arrivalDistance, 0));
             yield return followCoroutine;
             followCoroutine = null;
 
@@ -361,19 +407,31 @@ public class MonsterMovementController : MovementControllerBase
 
     public void StopMoving()
     {
-        desiredVelocity= Vector2.zero;
+        desiredVelocity = Vector2.zero;
         enemy.SetState(MonsterState.Idle);
     }
 
-    private void FlipSprite(bool flip)
+    void FlipSprite(bool flip)
     {
+        // Master flip local
         Vector3 scale = transform.localScale;
         float targetScaleX = flip ? -Mathf.Abs(scale.x) : Mathf.Abs(scale.x);
         if (scale.x != targetScaleX)
         {
             scale.x = targetScaleX;
             transform.localScale = scale;
+
+            // Notify all clients
+            GetComponent<PhotonView>().RPC("RPC_Flip", RpcTarget.Others, flip);
         }
+    }
+
+    [PunRPC]
+    void RPC_Flip(bool flip)
+    {
+        var scale = transform.localScale;
+        scale.x = flip ? -Mathf.Abs(scale.x) : Mathf.Abs(scale.x);
+        transform.localScale = scale;
     }
 
     void OnDrawGizmos()
@@ -388,16 +446,73 @@ public class MonsterMovementController : MovementControllerBase
             for (int i = 0; i < currentPath.Count - 1; i++)
             {
                 Vector3 from = currentPath[i];
-                Vector3 to = currentPath[i+1];
+                Vector3 to = currentPath[i + 1];
                 Gizmos.DrawLine(from, to);
             }
 
         }
-        if(debugEndNote!=null)
+        if (debugEndNote != null)
         {
             Vector3 targetPos = debugEndNote.worldPos;
             Gizmos.color = Color.green;
             Gizmos.DrawSphere(targetPos, 5f);
-        }    
+        }
+    }
+
+    // --- Photon callback: handle master switch ---
+    public void OnMasterClientSwitched(Player newMaster)
+    {
+        // If this client becomes master, initialize AI.
+        if (PhotonNetwork.IsMasterClient)
+        {
+            // Start initialization if not already running
+            if (!EnsurePathfinder())
+            {
+                // Try to ensure pathfinder again; don't kill component here but log
+                StartCoroutine(WaitForPathfinderInitialization());
+            }
+            else
+            {
+                // If pathfinder is ready, start patrol if not already
+                if (patrolCoroutine == null && !isPatrolling)
+                {
+                    patrolCoroutine = StartCoroutine(PatrolRoutine());
+                }
+            }
+        }
+        else
+        {
+            // We lost master role — stop AI coroutines to prevent duplicate execution.
+            Debug.Log($"Lost MasterClient role. Stopping AI on this client.");
+            StopAllAICoroutinesAndReset();
+        }
+    }
+
+    private void StopAllAICoroutinesAndReset()
+    {
+        // Stop only AI related coroutines
+        if (patrolCoroutine != null) { StopCoroutine(patrolCoroutine); patrolCoroutine = null; }
+        if (chaseCoroutine != null) { StopCoroutine(chaseCoroutine); chaseCoroutine = null; }
+        if (followCoroutine != null) { StopCoroutine(followCoroutine); followCoroutine = null; }
+
+        // Reset movement and AI flags
+        isPatrolling = false;
+        playerTarget = null;
+        ClearPath();
+        StopMoving();
+    }
+    public void BecomeMasterControlled()
+    {
+        StartCoroutine(WaitForPathfinderInitialization());
+    }
+
+    public void OnPlayerEnteredRoom(Player newPlayer) { }
+    public void OnPlayerLeftRoom(Player otherPlayer) { }
+    public void OnRoomPropertiesUpdate(ExitGames.Client.Photon.Hashtable propertiesThatChanged)
+    {
+    }
+
+    public void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
+    {
     }
 }

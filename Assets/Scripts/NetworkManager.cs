@@ -1,6 +1,7 @@
 ﻿using Photon.Pun;
 using Photon.Realtime;
 using UnityEngine;
+using System.Collections;
 
 public class NetworkManager : MonoBehaviourPunCallbacks
 {
@@ -54,12 +55,18 @@ public class NetworkManager : MonoBehaviourPunCallbacks
             Debug.Log("Leaved...");
         playerSpawned = false;
     }
-
+    public override void OnMasterClientSwitched(Player newMaster)
+    {
+        if (PhotonNetwork.IsMasterClient)
+        {
+            gridmapLoader.TakeOverMonsters();
+        }
+    }
 
     public override void OnJoinedRoom()
     {
-        if (debugMode)
-            Debug.Log("Joined..."+PhotonNetwork.CurrentRoom);
+        if(PhotonNetwork.IsMasterClient)
+            gridmapLoader.SpawnAllMonsters();
         Transform spawn = gridmapLoader.FindSpawnPoint(gridmapLoader.currentOrigin);
         GameObject player = PhotonNetwork.Instantiate(
             "Prefabs/Character",
@@ -73,7 +80,10 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         if (camFollow != null)
             camFollow.SnapToTargetImmediate();
         AssignPlayerToUI(player);
+        gridmapLoader.FindAllMonster();
         playerSpawned = true;
+        if (debugMode)
+            Debug.Log("Joined..." + PhotonNetwork.CurrentRoom);
     }
     private void AssignPlayerToUI(GameObject obj)
     {

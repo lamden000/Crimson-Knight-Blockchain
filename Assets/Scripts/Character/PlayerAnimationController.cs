@@ -61,17 +61,26 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
     private void Awake()
     {
         spriteRenderers = new Dictionary<CharacterPart, SpriteRenderer>();
-        foreach (var pair in spriteRenderersInspector)
+        partVariants = new Dictionary<CharacterPart, int>();
+
+        // INIT toàn bộ enum để khỏi thiếu key
+        foreach (CharacterPart part in Enum.GetValues(typeof(CharacterPart)))
         {
-            spriteRenderers[pair.part] = pair.renderer;
+            if (!spriteRenderers.ContainsKey(part))
+                spriteRenderers[part] = null;
+
+            if (!partVariants.ContainsKey(part))
+                partVariants[part] = 0;
         }
 
-        partVariants = new Dictionary<CharacterPart, int>();
+        // Ghi đè bằng inspector nếu có
+        foreach (var pair in spriteRenderersInspector)
+            spriteRenderers[pair.part] = pair.renderer;
+
         foreach (var pair in variantsInspector)
-        {
             partVariants[pair.part] = pair.variant;
-        }
     }
+
 
 
     private void Start()
@@ -81,7 +90,7 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
         currentDir=Direction.Down;
         currentState = State.Idle;
 
-        weaponType = character.getWeaponType();
+        weaponType = character.GetWeaponType();
         partVariants[weaponType]=weaponVariant;
         spriteRenderers[weaponType]=weaponSpriteRenderer;
 
@@ -289,19 +298,19 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
                 break;
             case CharacterPart.Sword:
                 spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant,character.getWeaponType());
+                database.LoadWeapon(variant,character.GetWeaponType());
                 break;
             case CharacterPart.Gun:
                 spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant, character.getWeaponType());
+                database.LoadWeapon(variant, character.GetWeaponType());
                 break;
             case CharacterPart.Knive:
                 spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant, character.getWeaponType());
+                database.LoadWeapon(variant, character.GetWeaponType());
                 break;
             case CharacterPart.Staff:
                 spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant, character.getWeaponType());
+                database.LoadWeapon(variant, character.GetWeaponType());
                 break;
             case CharacterPart.Wings:
                 spriteRenderers[CharacterPart.Wings].sprite = null;
@@ -334,7 +343,11 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
         else
         {
             // RECEIVE animation state
-            currentDir = (Direction)(int)stream.ReceiveNext();
+            object raw = stream.ReceiveNext();
+            if (TryGetIntFromObject(raw, out int val))
+            {
+                currentDir = (Direction)val;
+            }
             currentState = (State)(int)stream.ReceiveNext();
             currentEyeState = (EyeState)(int)stream.ReceiveNext();
 
@@ -387,7 +400,6 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
             int variant;
             if (!TryGetIntFromObject(rawVal, out variant))
             {
-                Debug.LogWarning($"PlayerAppearance: couldn't parse variant for part {part} (raw type: {rawVal?.GetType()}). Skipping.");
                 continue;
             }
 

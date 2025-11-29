@@ -20,7 +20,7 @@ public class Character : MonoBehaviour
         m_Controller = GetComponent<PlayerMovementController>();
     }
 
-    public CharacterPart getWeaponType()
+    public CharacterPart GetWeaponType()
     {
         CharacterPart weapon = CharacterPart.Gun;
         switch (m_Class)

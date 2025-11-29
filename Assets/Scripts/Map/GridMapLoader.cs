@@ -18,7 +18,6 @@ public class GridmapLoader : MonoBehaviour
     public string jsonFileName = "map1.json";
     public Tilemap tilemap;
     public float tileScale = 1f;
-    public GameObject monsterPrefab;
     public GameObject npcPrefab;
     public GameObject departPointPrefab;
     public int subGridDivisions=2;
@@ -34,7 +33,10 @@ public class GridmapLoader : MonoBehaviour
     public string currentOrigin = "Default";
     public bool drawGizmo=false;
     public List<GameObject> spawnPoints = new List<GameObject>();
-
+    private List<TiledObject> pendingMonsters = new List<TiledObject>();
+    public List<MonsterMovementController> monsters = new List<MonsterMovementController>();
+    private bool firstLoadDone = false;
+    private GameObject monsterParent;
     private void Start()
     {
         pathfinder=Pathfinder.Instance;
@@ -142,7 +144,6 @@ public class GridmapLoader : MonoBehaviour
             }
         }
 
-       // Debug.Log($"✅ Loaded {loadedCount} tiles from '{folder}'");
     }
 
 
@@ -303,13 +304,6 @@ public class GridmapLoader : MonoBehaviour
     // Unload currently loaded map: clear tilemap, destroy spawned parents and clear caches.
     public void UnloadCurrentMap()
     {
-        // Do not stop all coroutines here because UnloadCurrentMap may be called
-        // from inside the overlay coroutine (LoadMapWithOverlay). Stopping all
-        // coroutines would cancel the overlay fade-out. If specific loader
-        // coroutines need cancelling in the future, track their Coroutine handles
-        // and stop them selectively.
-
-        // clear tilemap visuals
         if (tilemap != null)
             tilemap.ClearAllTiles();
 
@@ -338,8 +332,6 @@ public class GridmapLoader : MonoBehaviour
         // Note: Pathfinder grid will be replaced when a new map is loaded.
         Debug.Log("GridmapLoader: Unloaded current map.");
     }
-
-    // Public helper to unload current map then load a different map by json filename (e.g. \"Map01.json\").
     public void LoadMapByName(String newJsonFileName, string origin)
     {
         currentOrigin = origin;
@@ -406,7 +398,7 @@ public class GridmapLoader : MonoBehaviour
     {
         GameObject colliderParent = new GameObject("Colliders");
         GameObject npcParent = new GameObject("NPCs");
-        GameObject monsterParent = new GameObject("Monsters");
+        monsterParent = new GameObject("Monsters");
         GameObject objectParent = new GameObject("Objects");
 		GameObject spawnParent = new GameObject("SpawnPoints");
 		GameObject departParent = new GameObject("DepartPoints");
@@ -439,7 +431,7 @@ public class GridmapLoader : MonoBehaviour
                         break;
 
                     case "Monster":
-                        SpawnMonster(obj,monsterParent.transform);
+                        pendingMonsters.Add(obj);
                         break;
                     case "Spawn Point":
                         CreateSpawnPoint(obj, spawnParent.transform);
@@ -456,6 +448,35 @@ public class GridmapLoader : MonoBehaviour
             }
         }
     }
+    public void SpawnAllMonsters()
+    {
+        foreach (var obj in pendingMonsters)
+        {
+            SpawnMonster(obj, monsterParent.transform);
+        }
+        pendingMonsters.Clear();
+    }
+
+
+    private void SpawnMonster(TiledObject obj, Transform monsterParent)
+    {
+        Vector3 pos = GetWorldPosition(obj);
+        if (System.Enum.TryParse(obj.name, out MonsterName npcEnum))
+        {
+            GameObject monster = PhotonNetwork.InstantiateRoomObject(
+            "Prefabs/Enemy",
+            pos,
+            Quaternion.identity,
+            0,
+            new object[] { (int)npcEnum }
+            );
+            monster.name = $"Monster_{obj.name}_{obj.id}";
+            monster.transform.SetParent(monsterParent);
+            var monsterCtrl = monster.GetComponent<Monster>();
+            monsterCtrl.monsterName = npcEnum;
+        }
+    }
+
 
     private void SpawnNPC(TiledObject obj,Transform npcParent)
     {
@@ -475,25 +496,6 @@ public class GridmapLoader : MonoBehaviour
         if (npcCtrl != null && System.Enum.TryParse(obj.name, out NPCName npcEnum))
         {
             npcCtrl.Init(npcEnum);
-        }
-    }
-
-    private void SpawnMonster(TiledObject obj, Transform monsterParent)
-    {
-        if (monsterPrefab == null)
-        {
-            Debug.LogError("Monster prefab not assigned!");
-            return;
-        }
-
-        Vector3 pos = GetWorldPosition(obj);
-        GameObject monster = Instantiate(monsterPrefab, pos, Quaternion.identity);
-        monster.name = $"Monster_{obj.name}_{obj.id}";
-        monster.transform.SetParent(monsterParent);
-        var monsterCtrl = monster.GetComponent<Monster>();
-        if (monsterCtrl != null && System.Enum.TryParse(obj.name, out MonsterName npcEnum))
-        {
-            monsterCtrl.monsterName = npcEnum;
         }
     }
 
@@ -577,6 +579,13 @@ public class GridmapLoader : MonoBehaviour
         departComp.destinationMapName = baseName;
         departComp.direction = direction.ToLowerInvariant();
     }
+    public void TakeOverMonsters()
+    {
+        foreach (var m in monsters)
+        {
+            m.BecomeMasterControlled();
+        }
+    }
 
     public Transform FindSpawnPoint(string origin)
     {
@@ -654,4 +663,29 @@ public class GridmapLoader : MonoBehaviour
             }
         }
     }
+
+    public void FindAllMonster()
+    {
+        StartCoroutine(WaitUntilAllMonstersAppear());
+    }
+
+    IEnumerator WaitUntilAllMonstersAppear()
+    {
+        WaitForSeconds wait = new WaitForSeconds(0.1f);
+
+        while (true)
+        {
+            var found = FindObjectsByType<MonsterMovementController>(FindObjectsSortMode.None);
+
+            if (found.Length >= pendingMonsters.Count)
+            {
+                monsters = found.ToList();
+                yield break;
+            }
+
+            yield return wait; 
+        }
+    }
+
+
 }
