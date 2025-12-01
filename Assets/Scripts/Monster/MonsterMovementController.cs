@@ -104,15 +104,10 @@ public class MonsterMovementController : MovementControllerBase, IInRoomCallback
 
     public void HandleGetHit(Transform attacker)
     {
-        if (!PhotonNetwork.IsMasterClient)
-            return;
-
         StopPatrol();
         if (chaseCoroutine != null) StopCoroutine(chaseCoroutine);
 
         if (isDebugging) Debug.Log("[GetHit] Kẻ địch bị đánh. Dừng mọi Coroutine di chuyển.");
-
-        enemy.SetState(MonsterState.GetHit);
 
         StartCoroutine(GetHitDelay(attacker));
     }

@@ -1,8 +1,10 @@
 using Assets.Scripts.Utils;
+using Photon.Pun;
+using Photon.Realtime;
 using System;
 using UnityEngine;
 
-public class Character : MonoBehaviour
+public class Character :MonoBehaviourPun
 {
     public enum Clazz { Knight, Assassin, Markman, Wizard }
 
@@ -44,9 +46,16 @@ public class Character : MonoBehaviour
 
     public void TakeDamage(float damage, GameObject attacker)
     {
-        m_Controller.HandleGetHit();        
-        GameObject hit= Instantiate(hitEffect,transform.position+new Vector3(0,50,0),Quaternion.identity);
-        Destroy(hit,0.5f);
+        var pv = GetComponent<PhotonView>();
+        pv.RPC("RPC_TakeDamage", RpcTarget.All, damage, this.photonView.ViewID);
+    }
+    [PunRPC]
+    public void RPC_TakeDamage(float damage, int attackerID)
+    {
+        m_Controller.HandleGetHit();
+
+        GameObject hit = Instantiate(hitEffect, transform.position + new Vector3(0, 50, 0), Quaternion.identity);
+        Destroy(hit, 0.5f);
     }
 
     void Update()

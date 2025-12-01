@@ -317,7 +317,7 @@ public class PlayerMovementController : MovementControllerBase
             else
                 anim.SetAnimation(Direction.Down, State.Attack);
         }
-        targetEnemy.gameObject.GetComponent<Monster>().TakeDamage(100, gameObject);
+        targetEnemy.gameObject.GetComponent<Monster>().RequestDamage(100, gameObject);
         anim.SetAttackAnimation(true);
     }
 

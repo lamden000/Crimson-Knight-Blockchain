@@ -274,8 +274,6 @@ public class GridmapLoader : MonoBehaviour
                 subGrid[y, x] = new TileNode(x, y, worldPos, walkable);
             }
         }
-
-        Debug.Log("✅ Collider offset (-tileW, -tileH) applied to fix overlap alignment.");
         return subGrid;
     }
 

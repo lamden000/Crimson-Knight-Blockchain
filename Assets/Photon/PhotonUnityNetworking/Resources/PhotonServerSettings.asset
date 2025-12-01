@@ -39,6 +39,8 @@ MonoBehaviour:
   - RPC_SetAnim
   - RPC_SetState
   - RPC_Flip
+  - RPC_ApplyDamageMaster
+  - RPC_TakeDamage
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1
