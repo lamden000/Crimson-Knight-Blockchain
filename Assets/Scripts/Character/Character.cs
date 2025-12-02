@@ -14,6 +14,8 @@ public class Character :MonoBehaviourPun
     public Clazz GetClass()
     { return m_Class; }
 
+    public int damage = 10;
+
     private PlayerMovementController m_Controller;
     public GameObject hitEffect;
 

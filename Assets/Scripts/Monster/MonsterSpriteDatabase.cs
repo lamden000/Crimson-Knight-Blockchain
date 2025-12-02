@@ -10,7 +10,7 @@ public class MonsterSpriteDatabase : MonoBehaviour
     private Dictionary<MonsterName,Dictionary<MonsterState,List<Sprite>>> database
       = new Dictionary<MonsterName, Dictionary<MonsterState, List<Sprite>>>();
 
-    public string folderPath = "Enemies";
+    public string folderPath = "Monsters/Sprites";
     public static MonsterSpriteDatabase Instance { get; private set; }
 
     private List<MonsterName> loadedEnemy = new List<MonsterName>();

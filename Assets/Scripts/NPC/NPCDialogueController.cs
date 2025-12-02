@@ -40,7 +40,7 @@ public class NPCDialogueController : MonoBehaviour
     private void Start()
     {     
         audioSource = GetComponent<AudioSource>();
-        worldCanvas = CharacterDialogManager.Instance.worldCanvas;
+        worldCanvas= GetComponentInChildren<Canvas>();
         dialoguePanel = CharacterDialogManager.Instance.dialoguePanel;
         dialogueText = CharacterDialogManager.Instance.dialogueText;
         portraitImage = CharacterDialogManager.Instance.portraitImage;

@@ -41,6 +41,7 @@ MonoBehaviour:
   - RPC_Flip
   - RPC_ApplyDamageMaster
   - RPC_TakeDamage
+  - RPC_SyncHealth
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

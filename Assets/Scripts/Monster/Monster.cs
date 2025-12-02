@@ -1,5 +1,8 @@
 ﻿using Photon.Pun;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum MonsterState { Idle, Walk, Attack, GetHit }
 public enum MonsterName { Slime = 1000, Snail = 1001, Scorpion = 1103, Bunny = 1173, Frog = 1215 }
@@ -8,13 +11,20 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
 {
     private MonsterMovementController movementController;
     private MonsterAnimationController animationController;
+    private HealthBar healthBar;
+    public MonsterData monsterData { get; private set; }
+
+    public List<DropEntry> dropTable; 
+
+    public GameObject itemPickupPrefab; 
 
     public MonsterName monsterName = MonsterName.Slime;
 
     public MonsterState currentState;
     private bool isDead = false;
+    public int currentHealth { private set; get; }
 
-    public float damage { private set; get; } = 10f;
+    private string dataPath = $"Monsters/Data";
 
     public bool IsDead => isDead;
 
@@ -22,16 +32,29 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
     {
         animationController = GetComponent<MonsterAnimationController>();
         movementController = GetComponent<MonsterMovementController>();
+        healthBar = GetComponentInChildren<HealthBar>();
     }
+
+    void Start()
+    {
+        var nametag = GetComponentInChildren<NameTag>();
+        nametag.SetName(monsterName.ToString());
+    }    
 
     public void OnPhotonInstantiate(PhotonMessageInfo info)
     {
         object[] data = info.photonView.InstantiationData;
         monsterName = (MonsterName)(int)data[0];
-
+        string path = $"{dataPath}/{(int)monsterName}";
+        monsterData = Resources.Load<MonsterData>(path);
         animationController.InitializeMonster();
-
-        // Late-joiner sẽ phát lại tất cả RPC buffered, bao gồm state hiện tại
+        if (data == null)
+        {
+            Debug.LogError($"[Monster] Không tìm được MonsterData tại path: {path}. Bạn gõ sai tên rồi đó bạn ơi.");
+            return;
+        }
+        currentHealth= monsterData.maxHP;
+        movementController.moveSpeed = monsterData.moveSpeed;
     }
 
     public void SetState(MonsterState s, GameObject attacker = null)
@@ -79,6 +102,24 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
         }
     }
 
+    [PunRPC]
+    void RPC_SyncHealth(int health)
+    {
+        currentHealth = health;
+
+        if(healthBar != null)
+            healthBar.SetHealth(currentHealth,monsterData.maxHP);
+        else 
+            Debug.LogWarning("HealthBar component not found on Monster.");
+
+        if (currentHealth <= 0)
+        {
+            currentState = MonsterState.Idle;
+          //  animationController.HandleDeath();
+        }
+    }
+
+
     public void RequestDamage(int dmg, GameObject attacker)
     {
         int attackerID = attacker.GetComponent<PhotonView>().ViewID;
@@ -99,6 +140,59 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
     private void TakeDamage(int dmg, GameObject attacker)
     {
         if (isDead) return;
-        SetState(MonsterState.GetHit,attacker);
+
+        // Master trừ máu
+        currentHealth -= dmg;
+        currentHealth = Mathf.Clamp(currentHealth, 0,monsterData.maxHP);
+
+        Debug.Log($"[Monster] {monsterName} took {dmg}, HP = {currentHealth}/{monsterData.maxHP}");
+
+        // Sync máu với tất cả client (buffered để người join sau vẫn thấy máu đúng)
+        photonView.RPC(nameof(RPC_SyncHealth), RpcTarget.AllBuffered, currentHealth);
+
+        // Trigger animation/state
+        SetState(MonsterState.GetHit, attacker);
+
+        if (currentHealth <= 0)
+            Die(attacker);
+    }
+    private void Die(GameObject attacker)
+    {
+        if (isDead) return;
+
+        if (PhotonNetwork.IsMasterClient)
+        {
+            ItemData drop = GetRandomDrop();
+
+            if (drop != null)
+            {
+                int id = drop.itemID; // convert để gửi qua mạng
+                PhotonNetwork.Instantiate("Prefabs/Item", transform.position, Quaternion.identity, 0, new object[] { id });
+            }
+        }
+
+        isDead = true;
+        currentState = MonsterState.Idle;
+
+        Debug.Log($"[Monster] {monsterName} DIED");
+
+      //  animationController.HandleDeath(); // hoặc hàm bạn có
+
+        // tắt AI + movement
+        movementController.enabled = false;
+        PhotonNetwork.Destroy(gameObject);
+    }
+    private ItemData GetRandomDrop()
+    {
+        float roll = Random.value;
+        float cumulative = 0f;
+
+        foreach (var entry in monsterData.dropTable)
+        {
+            cumulative += entry.dropRate;
+            if (roll <= cumulative)
+                return entry.item;
+        }
+        return null;
     }
 }

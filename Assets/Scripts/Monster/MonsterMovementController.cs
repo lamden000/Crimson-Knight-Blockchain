@@ -202,7 +202,7 @@ public class MonsterMovementController : MovementControllerBase, IInRoomCallback
         yield return new WaitForSeconds(animationDelay);
 
         // Damage must be handled via RPCs to ensure authoritative updates (Master does actual damage).
-        playerTarget.gameObject.GetComponent<Character>().TakeDamage(enemy.damage, gameObject);
+        playerTarget.gameObject.GetComponent<Character>().TakeDamage(enemy.monsterData.damage, gameObject);
 
         StopMoving();
 

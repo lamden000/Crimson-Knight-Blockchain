@@ -128,7 +128,9 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
             if (dir == (int)Direction.Up) SetDirectionUp(true);
             else SetDirectionUp(false);
 
-            transform.rotation = (dir == (int)Direction.Right) ? Quaternion.Euler(0, 180f, 0) : Quaternion.identity;
+            Vector3 scale = transform.localScale;
+            scale.x = (dir == (int)Direction.Right) ? -1f : 1f;
+            transform.localScale = scale;
 
             currentDir = (Direction)dir;
             currentState = (State)state;

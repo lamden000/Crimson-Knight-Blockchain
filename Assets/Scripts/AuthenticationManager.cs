@@ -12,7 +12,6 @@ public class AuthenticationManager : MonoBehaviour
     public TextMeshProUGUI statusText;
 
     private enum AuthMode { Login, Register }
-    private AuthMode mode = AuthMode.Login;
 
     private bool usernameRequired = false; // Để biết userField đã bật hay chưa
 
@@ -30,7 +29,6 @@ public class AuthenticationManager : MonoBehaviour
         if (!usernameRequired)
         {
             // Lần bấm đầu tiên → bật ô username
-            mode = AuthMode.Register;
             usernameRequired = true;
 
             userField.gameObject.SetActive(true);
@@ -82,6 +80,19 @@ public class AuthenticationManager : MonoBehaviour
         // Reset UI
         usernameRequired = false;
         userField.gameObject.SetActive(false);
+
+        var request = new UpdateUserTitleDisplayNameRequest
+        {
+            DisplayName = userField.text 
+        };
+
+        PlayFabClientAPI.UpdateUserTitleDisplayName(request,
+            res => {
+                Debug.Log("DisplayName set OK!");
+                // Chuyển sang scene login hoặc tự login luôn
+            },
+            err => Debug.LogError(err.GenerateErrorReport())
+        );
     }
 
     void OnRegisterFailure(PlayFabError error)
@@ -90,10 +101,6 @@ public class AuthenticationManager : MonoBehaviour
         Debug.LogError("Register FAIL:\n" + error.GenerateErrorReport());
     }
 
-
-    // -----------------------------
-    //          LOGIN
-    // -----------------------------
     public void OnPressLogin()
     {
         if (userField.gameObject.activeSelf)
@@ -101,7 +108,6 @@ public class AuthenticationManager : MonoBehaviour
             // Ẩn username field nếu đang hiện (vì login không cần)
             userField.gameObject.SetActive(false);
             usernameRequired = false;
-            mode = AuthMode.Login;
 
             DisplayStatus("Login mode.", false);
             return;
@@ -127,7 +133,11 @@ public class AuthenticationManager : MonoBehaviour
         var request = new LoginWithEmailAddressRequest
         {
             Email = email,
-            Password = password
+            Password = password,
+            InfoRequestParameters = new GetPlayerCombinedInfoRequestParams
+            {
+                GetUserAccountInfo = true
+            }
         };
 
         PlayFabClientAPI.LoginWithEmailAddress(
@@ -137,13 +147,27 @@ public class AuthenticationManager : MonoBehaviour
         );
     }
 
+
     void OnLoginSuccess(LoginResult result)
     {
-        DisplayStatus("Login successful! Welcome back!", false);
-        Debug.Log("Login OK — " + result.PlayFabId);
+        var data = new PlayerData();
 
-        SceneManager.LoadScene("Test_Lam"); // load scene bạn muốn
+        data.userId = result.PlayFabId;
+
+        // username bạn đã đăng ký
+        string username = result.InfoResultPayload.AccountInfo.Username;
+        data.username = username;
+
+        // dữ liệu còn lại tuỳ bạn
+        data.level = 1;
+        data.exp = 0;
+        data.gold = 0;
+
+        PlayerDataManager.Instance.Initialize(data);
+
+        SceneManager.LoadScene("Test_Lam");
     }
+
 
     void OnLoginFailure(PlayFabError error)
     {

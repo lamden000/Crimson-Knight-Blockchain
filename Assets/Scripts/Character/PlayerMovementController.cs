@@ -31,10 +31,12 @@ public class PlayerMovementController : MovementControllerBase
     [Header("Interaction")]
     [SerializeField] private float npcInteractRange = 1.2f;
     private Coroutine npcTalkCoroutine;
+    private Character character;
 
     protected override void Start()
     {
         base.Start();
+        character = GetComponent<Character>();
     }
 
     private void Awake()
@@ -317,7 +319,7 @@ public class PlayerMovementController : MovementControllerBase
             else
                 anim.SetAnimation(Direction.Down, State.Attack);
         }
-        targetEnemy.gameObject.GetComponent<Monster>().RequestDamage(100, gameObject);
+        targetEnemy.gameObject.GetComponent<Monster>().RequestDamage(character.damage, gameObject);
         anim.SetAttackAnimation(true);
     }
 

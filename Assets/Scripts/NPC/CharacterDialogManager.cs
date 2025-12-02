@@ -12,7 +12,6 @@ public class CharacterDialogManager : MonoBehaviour
 
     [Header("Dialogue UI References")]
     public Canvas screenCanvas;
-    public Canvas worldCanvas;
     public GameObject dialoguePanel;
     public TextMeshProUGUI dialogueText;
     public Image portraitImage;

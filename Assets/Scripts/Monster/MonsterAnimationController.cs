@@ -15,8 +15,6 @@ public class MonsterAnimationController : MonoBehaviour
     private float timer;
     private int currentFrame;
 
-    private MonsterState syncedState;
-
     private void Awake()
     {
         monster = GetComponent<Monster>();
@@ -27,7 +25,6 @@ public class MonsterAnimationController : MonoBehaviour
 
     public void InitializeMonster()
     {
-        syncedState = monster.currentState;
         _name = monster.monsterName;
         database.LoadSprites(_name);
         AdjustColliderToSprite();
