@@ -40,6 +40,7 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
     int weaponVariant = 0;
 
     private CharacterPart weaponType;
+    public AttackAnimationController attackAnimation;
 
     private Dictionary<CharacterPart, int> partVariants;
 
@@ -91,6 +92,7 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
         currentState = State.Idle;
 
         weaponType = character.GetWeaponType();
+        attackAnimation.SetWeaponType(weaponType);
         partVariants[weaponType]=weaponVariant;
         spriteRenderers[weaponType]=weaponSpriteRenderer;
 
@@ -122,17 +124,26 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
     [PunRPC]
     void RPC_SetAnim(int dir, int state)
     {
+
         if (dir != (int)currentDir || state != (int)currentState)
         {
 
             if (dir == (int)Direction.Up) SetDirectionUp(true);
+
             else SetDirectionUp(false);
 
             Vector3 scale = transform.localScale;
-            scale.x = (dir == (int)Direction.Right) ? -1f : 1f;
+            scale.x = Mathf.Abs(scale.x) * ((dir == (int)Direction.Right) ? -1 : 1);
             transform.localScale = scale;
 
             currentDir = (Direction)dir;
+
+            if (state == (int)State.Attack)
+                SetAttackAnimation(true);
+            else if (currentState == State.Attack)
+            {
+                SetAttackAnimation(false);
+            }
             currentState = (State)state;
             currentFrame = 0;
             timer = 0;
@@ -225,20 +236,26 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
 
     }
 
-    public void SetAttackAnimation(bool isAttacking)
+    private void SetAttackAnimation(bool isAttacking)
     {
-        if(isAttacking)
+        if (isAttacking)
         {
             spriteRenderers[weaponType].gameObject.SetActive(false);
-            currentEyeState=EyeState.Attack;
-            StartCoroutine(ResetAttackAnimation(0.3f));
-        } 
+            currentEyeState = EyeState.Attack;
+
+            attackAnimation.gameObject.SetActive(true);
+            attackAnimation.PlayAttackAnimation(currentDir);
+
+            StartCoroutine(ResetAttackAnimation(0.5f));
+        }
         else
         {
+            attackAnimation.gameObject.SetActive(false);
             spriteRenderers[weaponType].gameObject.SetActive(true);
             currentEyeState = EyeState.Idle;
         }
     }
+
 
     public void SetGetHitAnimation(bool getHit)
     {

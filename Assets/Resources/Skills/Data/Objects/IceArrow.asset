@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: IceArrow
+  m_EditorClassIdentifier: 
+  skillName: 
+  mainLoop: 0
+  autoDisableAfterMain: 0
+  mainFrames:
+  - {fileID: 4926361543172099578, guid: f95f6d7a8665ed242a3e982323b7d63e, type: 3}
+  mainFPS: 12
+  sparkleFrames: []
+  sparkleFPS: 12
+  aftermathFrames:
+  - {fileID: 3695381967250574800, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  - {fileID: 7097209660065040560, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  - {fileID: 4654977119808912762, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  - {fileID: 9077436423622767587, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  aftermathPlayTime: 0
+  aftermathLoop: 0
+  aftermathFPS: 12
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 5
+  speed: 300
+  explosionDelay: 0
+  scale: {x: 1, y: 1, z: 1}

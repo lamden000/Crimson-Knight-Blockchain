@@ -54,6 +54,16 @@ public class PlayerMovementController : MovementControllerBase
     private void Update()
     {
         if (!photonView.IsMine) return;
+        
+        // Check if character is dead
+        if (character != null && character.IsDead)
+        {
+            desiredVelocity = Vector2.zero;
+            CancelAutoFollow();
+            anim.SetAnimation(anim.GetCurrentDirection(), State.Idle);
+            return;
+        }
+        
         if (!GameManager.Instance.CanPlayerMove)
         {
             desiredVelocity = Vector2.zero;
@@ -192,7 +202,6 @@ public class PlayerMovementController : MovementControllerBase
             {
                 isAttacking = false;
                 anim.SetAnimation(anim.GetCurrentDirection(), State.Idle);
-                anim.SetAttackAnimation(false);
             }
         }
 
@@ -298,6 +307,9 @@ public class PlayerMovementController : MovementControllerBase
 
     private void TryAttack(Vector3 dir)
     {
+        // Don't attack if dead
+        if (character != null && character.IsDead) return;
+        
         if (isAttacking || attackCooldownTimer > 0) return;
 
         isAttacking = true;
@@ -320,7 +332,6 @@ public class PlayerMovementController : MovementControllerBase
                 anim.SetAnimation(Direction.Down, State.Attack);
         }
         targetEnemy.gameObject.GetComponent<Monster>().RequestDamage(character.damage, gameObject);
-        anim.SetAttackAnimation(true);
     }
 
     private void ManualMove()

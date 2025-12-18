@@ -407,6 +407,7 @@ public class GridmapLoader : MonoBehaviour
         objectParent.transform.SetParent(transform);
         spawnParent.transform.SetParent(transform);
 		departParent.transform.SetParent(transform);
+        pendingMonsters.Clear();
         foreach (var layer in map.layers)
         {
             if (layer.type != "objectgroup" || layer.objects == null)
@@ -452,7 +453,6 @@ public class GridmapLoader : MonoBehaviour
         {
             SpawnMonster(obj, monsterParent.transform);
         }
-        pendingMonsters.Clear();
     }
 
 

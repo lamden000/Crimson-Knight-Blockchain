@@ -42,6 +42,8 @@ MonoBehaviour:
   - RPC_ApplyDamageMaster
   - RPC_TakeDamage
   - RPC_SyncHealth
+  - RPC_ApplyDamage
+  - RPC_SyncPosition
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

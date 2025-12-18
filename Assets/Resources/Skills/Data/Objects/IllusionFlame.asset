@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: IllusionFlame
+  m_EditorClassIdentifier: 
+  mainLoop: 0
+  autoDisableAfterMain: 1
+  mainFrames:
+  - {fileID: -8408763834710030297, guid: 5402c680f8e1a304a967f9ec5a8f57c5, type: 3}
+  - {fileID: -5167413608083449488, guid: 5402c680f8e1a304a967f9ec5a8f57c5, type: 3}
+  - {fileID: -549789443665989942, guid: 5402c680f8e1a304a967f9ec5a8f57c5, type: 3}
+  - {fileID: 9180251791023625898, guid: 5402c680f8e1a304a967f9ec5a8f57c5, type: 3}
+  - {fileID: -855298285791758126, guid: 5402c680f8e1a304a967f9ec5a8f57c5, type: 3}
+  mainFPS: 12
+  sparkleFrames: []
+  sparkleFPS: 12
+  aftermathFrames: []
+  aftermathPlayTime: 0
+  aftermathLoop: 0
+  aftermathFPS: 12
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 5
+  speed: 100
+  explosionDelay: 0
+  scale: {x: 1, y: 1, z: 1}

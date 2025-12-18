@@ -122,6 +122,8 @@ public class NetworkManager : MonoBehaviourPunCallbacks
         if (PhotonNetwork.IsMasterClient)
             gridmapLoader.SpawnAllMonsters();
 
+        gridmapLoader.FindAllMonster();
+
         GameObject player = PhotonNetwork.Instantiate(
             "Prefabs/Character",
             spawn.position,
@@ -166,7 +168,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     public override void OnPlayerPropertiesUpdate(Player targetPlayer, ExitGames.Client.Photon.Hashtable changedProps)
     {
-        Debug.Log($"=== OnPlayerPropertiesUpdate for Player {targetPlayer.ActorNumber} ===");
 
         if (changedProps.ContainsKey("username"))
         {
@@ -187,7 +188,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
     private IEnumerator ApplyNameTagWhenReady(Player p)
     {
         string username = p.CustomProperties["username"] as string;
-        Debug.Log($"[ApplyNameTagWhenReady] Waiting for Player {p.ActorNumber} object...");
 
         while (true)
         {
@@ -200,7 +200,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
                     if (tag != null)
                     {
-                        Debug.Log($"[ApplyNameTagWhenReady] FOUND object for {p.ActorNumber}, setting name = {username}");
                         tag.SetName(username);
 
                         if (view.IsMine)
@@ -220,7 +219,6 @@ public class NetworkManager : MonoBehaviourPunCallbacks
 
     private void SetupPlayerObject(GameObject player)
     {
-        Debug.Log("=== SetupPlayerObject CALLED ===");
 
         PhotonView view = player.GetComponent<PhotonView>();
         var tag = player.GetComponentInChildren<NameTag>();

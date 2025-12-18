@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: Tornado
+  m_EditorClassIdentifier: 
+  skillName: 
+  mainLoop: 1
+  autoDisableAfterMain: 0
+  mainFrames:
+  - {fileID: 2259271575690319609, guid: 42f49b6f4a418024bb528c53fd081c07, type: 3}
+  - {fileID: -8436718709758766166, guid: 42f49b6f4a418024bb528c53fd081c07, type: 3}
+  - {fileID: 6229454369124393718, guid: 42f49b6f4a418024bb528c53fd081c07, type: 3}
+  - {fileID: -6223489153840976572, guid: 42f49b6f4a418024bb528c53fd081c07, type: 3}
+  - {fileID: 6229454369124393718, guid: 42f49b6f4a418024bb528c53fd081c07, type: 3}
+  - {fileID: -8436718709758766166, guid: 42f49b6f4a418024bb528c53fd081c07, type: 3}
+  mainFPS: 12
+  sparkleFrames: []
+  sparkleFPS: 12
+  aftermathFrames: []
+  aftermathPlayTime: 0
+  aftermathLoop: 0
+  aftermathFPS: 12
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 5
+  speed: 100
+  explosionDelay: 0
+  scale: {x: 1, y: 1, z: 1}

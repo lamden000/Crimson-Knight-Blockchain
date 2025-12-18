@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: GammaMeteor
+  m_EditorClassIdentifier: 
+  skillName: Gamma Meteor
+  mainLoop: 1
+  autoDisableAfterMain: 0
+  mainFrames:
+  - {fileID: 8086470450585349147, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: 682710032, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: -9523200131665078, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: 4922678214369986608, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  mainFPS: 12
+  sparkleFrames:
+  - {fileID: -1167038399, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: -1278642814, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: 993846487, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: -6199584294757338385, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: -1362568114, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  - {fileID: -1040091644, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  sparkleFPS: 12
+  aftermathFrames:
+  - {fileID: 843515851, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  aftermathFPS: 5
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 10
+  speed: 500
+  explosionDelay: 0
+  scale: {x: 1, y: 1, z: 1}

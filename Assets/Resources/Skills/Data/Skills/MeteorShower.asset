@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 700eb2cc5b9278f419699e6ccdad10e1, type: 3}
+  m_Name: MeteorShower
+  m_EditorClassIdentifier: 
+  spawnEntries:
+  - skillToSpawn: {fileID: 11400000, guid: bd7f925b00e73814488c2b80d470652e, type: 2}
+    chainEntry: 0
+    pattern: 3
+    count: 3
+    radius: 100
+    angleOffset: 0
+    origin: 0
+    allObjectsExplode: 1
+    movementType: 2
+    useBurst: 0
+    burstSize: 0
+    burstInterval: 0
+    useInterval: 0
+    interval: 0

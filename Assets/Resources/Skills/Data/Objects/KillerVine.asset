@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: KillerVine
+  m_EditorClassIdentifier: 
+  skillName: KillerVine
+  mainLoop: 1
+  autoDisableAfterMain: 0
+  mainFrames:
+  - {fileID: 7368376615046254699, guid: 531dc745cddaafb47afe21285142d3e1, type: 3}
+  - {fileID: -9200912628763051462, guid: 531dc745cddaafb47afe21285142d3e1, type: 3}
+  - {fileID: -3114426075411962287, guid: 531dc745cddaafb47afe21285142d3e1, type: 3}
+  - {fileID: 3442367526999890671, guid: 531dc745cddaafb47afe21285142d3e1, type: 3}
+  - {fileID: -3114426075411962287, guid: 531dc745cddaafb47afe21285142d3e1, type: 3}
+  - {fileID: -9200912628763051462, guid: 531dc745cddaafb47afe21285142d3e1, type: 3}
+  mainFPS: 10
+  sparkleFrames: []
+  sparkleFPS: 12
+  aftermathFrames: []
+  aftermathPlayTime: 0
+  aftermathLoop: 0
+  aftermathFPS: 12
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 3
+  speed: 0
+  explosionDelay: 0
+  scale: {x: 1, y: 1, z: 1}

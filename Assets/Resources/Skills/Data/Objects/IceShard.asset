@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: IceShard
+  m_EditorClassIdentifier: 
+  skillName: IceShard
+  mainLoop: 0
+  autoDisableAfterMain: 0
+  mainFrames:
+  - {fileID: -6496793494919465789, guid: 6098da03a9a94754084ec82b4a943a78, type: 3}
+  - {fileID: 1283264330071016771, guid: 6098da03a9a94754084ec82b4a943a78, type: 3}
+  - {fileID: 1947187603892450372, guid: 6098da03a9a94754084ec82b4a943a78, type: 3}
+  - {fileID: -9064722620783194276, guid: 4887e2155f4b1cd41bbb651020fa61a4, type: 3}
+  mainFPS: 12
+  sparkleFrames:
+  - {fileID: 3695381967250574800, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  - {fileID: 7097209660065040560, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  - {fileID: 4654977119808912762, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  - {fileID: 9077436423622767587, guid: d48e0eff27d8eb34d8760596c677c88e, type: 3}
+  sparkleFPS: 12
+  aftermathFrames: []
+  aftermathFPS: 12
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 2
+  speed: 0
+  explosionDelay: 0
+  scale: {x: 1, y: 1, z: 1}

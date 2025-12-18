@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: KnightAttackEffect
+  m_Controller: {fileID: 9100000, guid: ff6e2d6ac6000cf41857bc1e0be3fd4d, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: f460e0d5c6870914d9115b1f9a3d2eb2, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 41d37b83cc42b17428da279ec45c97ce, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 20439d315be118e4997812a150cf576f, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: ab92d2fff46ad8c47872ee0d37d68c6d, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 5c81323d9ee309346aed69c428b70455, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 4053303012fda0d4f951d82bbdad50e2, type: 2}

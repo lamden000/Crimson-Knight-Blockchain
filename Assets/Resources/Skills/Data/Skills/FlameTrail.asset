@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 700eb2cc5b9278f419699e6ccdad10e1, type: 3}
+  m_Name: FlameTrail
+  m_EditorClassIdentifier: 
+  spawnEntries:
+  - skillToSpawn: {fileID: 11400000, guid: 7c93ba72434498a4b94fb1f675123558, type: 2}
+    chainEntry: 0
+    pattern: 0
+    count: 1
+    radius: 0
+    angleOffset: 0
+    origin: 1
+    allObjectsExplode: 0
+    movementType: 1
+    useBurst: 0
+    burstSize: 0
+    burstInterval: 0
+    useInterval: 0
+    interval: 0

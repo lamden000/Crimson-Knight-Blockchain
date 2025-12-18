@@ -23,8 +23,6 @@ public class NameTag : MonoBehaviour
         }
 
         nameText.SetText(username);
-
-        Debug.Log("[NameTag.SetName] Setting name to: " + nameText.text);
     }
 
 }

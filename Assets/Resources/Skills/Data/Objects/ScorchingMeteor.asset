@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
+  m_Name: ScorchingMeteor
+  m_EditorClassIdentifier: 
+  skillName: Scorching Meteor
+  mainLoop: 1
+  autoDisableAfterMain: 0
+  mainFrames:
+  - {fileID: -1245131596, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: 556163307, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: -1207473189, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: 4184970948952281103, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: 1615853092, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: -28585169, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  mainFPS: 12
+  sparkleFrames:
+  - {fileID: 1486392746, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: -1055543678, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: 177669434, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  - {fileID: -743994482, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  sparkleFPS: 12
+  aftermathFrames:
+  - {fileID: 2388653448091785184, guid: aa80d0140683e314f95af1284687f14c, type: 3}
+  aftermathFPS: 1
+  explosionRotatesWithMovement: 1
+  autoExplosionTime: 10
+  speed: 500
+  explosionDelay: 0
+  scale: {x: 0.7, y: 0.7, z: 1}
