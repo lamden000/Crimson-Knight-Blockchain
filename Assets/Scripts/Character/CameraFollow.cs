@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 
 [RequireComponent(typeof(Camera))]
 public class CameraFollow : MonoBehaviour
@@ -16,6 +17,10 @@ public class CameraFollow : MonoBehaviour
     private Vector3 lastBoundsCenter;
     private Vector3 lastBoundsSize;
     private bool immediateSnap = false;
+
+    // Camera shake
+    private Vector3 shakeOffset = Vector3.zero;
+    private Coroutine shakeCoroutine;
 
     public void SetOrthographicSize(float orthographicSize)
     {
@@ -77,7 +82,7 @@ public class CameraFollow : MonoBehaviour
         {
             // perform one-frame immediate snap and skip lerp
             immediateSnap = false;
-            transform.position = new Vector3(target.position.x , target.position.y, transform.position.z);
+            transform.position = new Vector3(target.position.x , target.position.y, transform.position.z) + shakeOffset;
             return;
         }
 
@@ -97,7 +102,43 @@ public class CameraFollow : MonoBehaviour
         targetPos.x = Mathf.Clamp(targetPos.x, minBounds.x + halfWidth, maxBounds.x - halfWidth);
         targetPos.y = Mathf.Clamp(targetPos.y, minBounds.y + halfHeight, maxBounds.y - halfHeight);
 
-        transform.position = new Vector3(targetPos.x, targetPos.y, transform.position.z);
+        // Áp dụng camera shake offset
+        transform.position = new Vector3(targetPos.x, targetPos.y, transform.position.z) + shakeOffset;
     }
 
+    /// <summary>
+    /// Rung camera với độ mạnh và thời gian
+    /// </summary>
+    /// <param name="duration">Thời gian rung (giây)</param>
+    /// <param name="magnitude">Độ mạnh rung</param>
+    public void ShakeCamera(float duration = 0.2f, float magnitude = 0.1f)
+    {
+        if (shakeCoroutine != null)
+        {
+            StopCoroutine(shakeCoroutine);
+        }
+        shakeCoroutine = StartCoroutine(ShakeCoroutine(duration, magnitude));
+    }
+
+    private IEnumerator ShakeCoroutine(float duration, float magnitude)
+    {
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            // Tạo offset ngẫu nhiên
+            float x = Random.Range(-1f, 1f) * magnitude;
+            float y = Random.Range(-1f, 1f) * magnitude;
+
+            // Lưu offset để áp dụng trong LateUpdate
+            shakeOffset = new Vector3(x, y, 0f);
+
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        // Reset offset về 0
+        shakeOffset = Vector3.zero;
+        shakeCoroutine = null;
+    }
 }

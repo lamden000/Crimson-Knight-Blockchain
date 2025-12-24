@@ -46,9 +46,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5b02b9c23f1bf7a4e8040fddb3e9869a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemData: {fileID: 11400000, guid: 2304e9f62c7e214459d5ecffeac455b6, type: 2}
-  iconRenderer: {fileID: 9101093289727555933}
   item: {fileID: 0}
+  pickupRange: 50
 --- !u!212 &9101093289727555933
 SpriteRenderer:
   m_ObjectHideFlags: 0

@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 public enum MonsterState { Idle, Walk, Attack, GetHit }
-public enum MonsterName { Slime = 1000, Snail = 1001, Scorpion = 1103, Bunny = 1173, Frog = 1215 }
+public enum MonsterName { Slime = 1000, Snail = 1001, Scorpion = 1103,Hell_Bat=1030,Bone_Hunter=1054,Death=1096, Bunny = 1173, Frog = 1215 }
 
 public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
 {
@@ -38,7 +38,9 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
     void Start()
     {
         var nametag = GetComponentInChildren<NameTag>();
-        nametag.SetName(monsterName.ToString());
+        string rawName = monsterName.ToString();
+        string uiName = rawName.Replace("_", " ");
+        nametag.SetName(uiName);
     }    
 
     public void OnPhotonInstantiate(PhotonMessageInfo info)
@@ -166,15 +168,13 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
 
             if (drop != null)
             {
-                int id = drop.itemID; // convert để gửi qua mạng
+                int id = drop.itemID; 
                 PhotonNetwork.Instantiate("Prefabs/Item", transform.position, Quaternion.identity, 0, new object[] { id });
             }
         }
 
         isDead = true;
         currentState = MonsterState.Idle;
-
-        Debug.Log($"[Monster] {monsterName} DIED");
 
       //  animationController.HandleDeath(); // hoặc hàm bạn có
 
@@ -191,7 +191,9 @@ public class Monster : MonoBehaviourPun, IPunInstantiateMagicCallback
         {
             cumulative += entry.dropRate;
             if (roll <= cumulative)
+            {
                 return entry.item;
+            }
         }
         return null;
     }

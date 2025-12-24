@@ -32,7 +32,12 @@ public enum SkillMovementType
 [CreateAssetMenu(menuName = "Skill/SkillSpawnData")]
 public class SkillSpawnData : ScriptableObject
 {
+    public Sprite icon;
     public List<SpawnEntry> spawnEntries;
+    
+    [Header("Skill Settings")]
+    public float cooldown = 5f; // Cooldown time in seconds
+    public bool requiresTarget = false; // Skill có yêu cầu target không (ví dụ: Homing skill)
 }
 
 [System.Serializable]

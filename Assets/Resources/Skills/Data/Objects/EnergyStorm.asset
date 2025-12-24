@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
   m_Name: EnergyStorm
   m_EditorClassIdentifier: 
-  skillName: Energy Storm
   mainLoop: 0
   autoDisableAfterMain: 1
   mainFrames:
@@ -28,9 +27,14 @@ MonoBehaviour:
   sparkleFrames: []
   sparkleFPS: 12
   aftermathFrames: []
+  aftermathPlayTime: 0
+  aftermathLoop: 0
   aftermathFPS: 12
   explosionRotatesWithMovement: 1
-  autoExplosionTime: 1
+  autoExplosionTime: 0.4
   speed: 0
   explosionDelay: 0
+  shakeCameraOnExplode: 1
+  cameraShakeDuration: 0.2
+  cameraShakeMagnitude: 1
   scale: {x: 0.7, y: 0.7, z: 1}

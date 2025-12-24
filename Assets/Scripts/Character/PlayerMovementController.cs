@@ -14,6 +14,9 @@ public class PlayerMovementController : MovementControllerBase
     [Header("Movement Settings")]
     [SerializeField] private float attackRange = 1.2f;
     [SerializeField] private float attackCooldown = 0.8f;
+    [Header("Target Settings")]
+    [SerializeField] private float autoTargetRange = 3f; // Khoảng cách tự động chọn target
+    [SerializeField] private float loseTargetRange = 5f; // Khoảng cách mất target
     private static long timeStartSendMove = 0;
     private Transform targetEnemy;
     private bool isMovingToEnemy = false;
@@ -82,6 +85,13 @@ public class PlayerMovementController : MovementControllerBase
             desiredVelocity = Vector2.zero;
             return;
         }
+
+        // Handle skill input (1, 2, 3)
+        HandleSkillInput();
+
+        // Auto-target logic: tự động chọn target khi đến gần hoặc mất target khi đi xa
+        UpdateAutoTarget();
+
         moveAxisInput = new Vector2(moveInput.x, moveInput.y);
 
         UpdateAttackTimers();
@@ -142,9 +152,8 @@ public class PlayerMovementController : MovementControllerBase
             {
                 if (hit.collider.CompareTag("Enemy"))
                 {
-                    ClearPath();
-                    targetEnemy = hit.transform;
-                    isMovingToEnemy = true;
+                    // Click để chọn target và tự động di chuyển đến
+                    SetTargetAndMove(hit.transform);
                 }
                 else if (hit.collider.CompareTag("NPC"))
                 {
@@ -370,7 +379,11 @@ public class PlayerMovementController : MovementControllerBase
         }
         else
         {
-            anim.SetAnimation(anim.GetCurrentDirection(), State.Idle);
+            // Chỉ set idle nếu không đang attack (bao gồm cả skill attack)
+            if (!isAttacking)
+            {
+                anim.SetAnimation(anim.GetCurrentDirection(), State.Idle);
+            }
             desiredVelocity = Vector2.zero;
         }
     }
@@ -378,7 +391,9 @@ public class PlayerMovementController : MovementControllerBase
     private void CancelAutoFollow()
     {
         isMovingToEnemy = false;
-        targetEnemy = null;
+        // Không clear targetEnemy ở đây, chỉ dừng auto-follow
+        // Target sẽ được clear bởi UpdateAutoTarget() khi đi xa quá
+        
         // stop any running follow coroutine from base
         if (followCoroutine != null)
         {
@@ -415,5 +430,185 @@ public class PlayerMovementController : MovementControllerBase
         }
 
         npcTalkCoroutine = null;
+    }
+
+    private void HandleSkillInput()
+    {
+        if (SkillManager.Instance == null) return;
+
+        // Check for skill input (1, 2, 3)
+        if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1))
+        {
+            UseSkill(1);
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2))
+        {
+            UseSkill(2);
+        }
+        else if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3))
+        {
+            UseSkill(3);
+        }
+    }
+
+    private void UseSkill(int skillSlot)
+    {
+        if (SkillManager.Instance == null) return;
+
+        // Sử dụng target position thay vì mouse position
+        Vector3 targetPosition = transform.position; // Fallback: vị trí player
+        Transform target = null;
+
+        if (targetEnemy != null)
+        {
+            Monster enemy = targetEnemy.GetComponent<Monster>();
+            if (enemy != null && !enemy.IsDead)
+            {
+                target = targetEnemy;
+                targetPosition = targetEnemy.position; // Dùng vị trí target
+            }
+        }
+
+        // Try to use skill với target position
+        bool skillUsed = SkillManager.Instance.TryUseSkill(skillSlot, transform.position, targetPosition, target);
+        
+        // Nếu skill được dùng thành công, set animation tấn công
+        if (skillUsed)
+        {
+            PlayAttackAnimation(targetPosition);
+        }
+    }
+
+    private void PlayAttackAnimation(Vector3 targetPos)
+    {
+        // Set flag để tránh animation bị override bởi idle
+        isAttacking = true;
+        attackTimer = 0f;
+        desiredVelocity = Vector2.zero;
+
+        Vector3 dir = targetPos - transform.position;
+        
+        // Set animation theo hướng target (giống như TryAttack)
+        if (Mathf.Abs(dir.x) > Mathf.Abs(dir.y))
+        {
+            Direction direction = (dir.x > 0)
+                ? Direction.Right
+                : Direction.Left;
+            anim.SetAnimation(direction, State.Attack);
+        }
+        else
+        {
+            if (dir.y > 0)
+                anim.SetAnimation(Direction.Up, State.Attack);
+            else
+                anim.SetAnimation(Direction.Down, State.Attack);
+        }
+    }
+
+    private void UpdateAutoTarget()
+    {
+        // Kiểm tra target hiện tại
+        if (targetEnemy != null)
+        {
+            Monster enemy = targetEnemy.GetComponent<Monster>();
+            if (enemy == null || enemy.IsDead)
+            {
+                // Target đã chết hoặc không còn hợp lệ
+                ClearTarget();
+                return;
+            }
+
+            // Kiểm tra khoảng cách với target hiện tại
+            float distance = Vector3.Distance(transform.position, targetEnemy.position);
+            if (distance > loseTargetRange)
+            {
+                // Đi xa quá, mất target
+                ClearTarget();
+            }
+        }
+        else
+        {
+            // Không có target, tìm enemy gần nhất trong phạm vi
+            Transform nearestEnemy = FindNearestEnemy(autoTargetRange);
+            if (nearestEnemy != null)
+            {
+                SetTarget(nearestEnemy);
+            }
+        }
+    }
+
+    private Transform FindNearestEnemy(float maxRange)
+    {
+        Transform nearest = null;
+        float nearestDistance = float.MaxValue;
+
+        // Tìm tất cả Monster trong scene
+        Monster[] monsters = FindObjectsByType<Monster>(FindObjectsSortMode.None);
+        
+        foreach (Monster monster in monsters)
+        {
+            if (monster.IsDead) continue;
+
+            float distance = Vector3.Distance(transform.position, monster.transform.position);
+            if (distance <= maxRange && distance < nearestDistance)
+            {
+                nearest = monster.transform;
+                nearestDistance = distance;
+            }
+        }
+
+        return nearest;
+    }
+
+    private void SetTarget(Transform newTarget)
+    {
+        if (newTarget == null) return;
+
+        Monster enemy = newTarget.GetComponent<Monster>();
+        if (enemy == null || enemy.IsDead) return;
+
+        targetEnemy = newTarget;
+        // Chỉ set target, không tự động di chuyển
+        // Tự động di chuyển chỉ khi người chơi click vào enemy
+        isMovingToEnemy = false;
+        ClearPath();
+
+        // Update target indicator UI
+        UpdateTargetIndicator();
+    }
+
+    private void SetTargetAndMove(Transform newTarget)
+    {
+        if (newTarget == null) return;
+
+        Monster enemy = newTarget.GetComponent<Monster>();
+        if (enemy == null || enemy.IsDead) return;
+
+        targetEnemy = newTarget;
+        // Click vào enemy thì tự động di chuyển đến
+        isMovingToEnemy = true;
+        ClearPath();
+
+        // Update target indicator UI
+        UpdateTargetIndicator();
+    }
+
+    private void ClearTarget()
+    {
+        targetEnemy = null;
+        isMovingToEnemy = false;
+        ClearPath();
+
+        // Update target indicator UI
+        UpdateTargetIndicator();
+    }
+
+    private void UpdateTargetIndicator()
+    {
+        TargetIndicatorUI indicator = FindAnyObjectByType<TargetIndicatorUI>();
+        if (indicator != null)
+        {
+            indicator.SetTarget(targetEnemy);
+        }
     }
 }

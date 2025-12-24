@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/Authentication.unity
     guid: 47cbc762ecd777243ba4ac1885ec8dfa
   - enabled: 0
@@ -18,7 +18,7 @@ EditorBuildSettings:
     path: Assets/Scenes/Test_Tan.unity
     guid: dfdedf53a240eb940aa68d24208019a9
   - enabled: 1
-    path: Assets/Scenes/Test_Lam.unity
+    path: Assets/Scenes/Main.unity
     guid: b6fe7a2cc4f6cd641908047105c2bd0f
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

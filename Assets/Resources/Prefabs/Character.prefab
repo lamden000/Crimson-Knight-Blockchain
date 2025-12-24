@@ -1015,6 +1015,8 @@ MonoBehaviour:
   arrivalDistance: 10
   attackRange: 80
   attackCooldown: 1
+  autoTargetRange: 500
+  loseTargetRange: 500
   npcInteractRange: 50
 --- !u!50 &9042967047990573357
 Rigidbody2D:
@@ -1055,8 +1057,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 053c5be5fec4a8147aa3d89e4faf86de, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Class: 1
+  m_Class: 0
   damage: 10
+  maxHP: 100
+  respawnDelay: 2
   hitEffect: {fileID: 1065216450715895469, guid: 96a3c2cfe50270047b9dcd3314b41292, type: 3}
 --- !u!114 &5789496537744389210
 MonoBehaviour:

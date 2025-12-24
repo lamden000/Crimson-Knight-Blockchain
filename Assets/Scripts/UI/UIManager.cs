@@ -5,6 +5,7 @@ public class UIManager : MonoBehaviour
     public static UIManager Instance { get; private set; }
 
     [SerializeField] private DialogFactory dialogFactory;
+    public DialogFactory DialogFactory => dialogFactory;
 
     void Awake()
     {

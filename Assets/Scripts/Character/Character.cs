@@ -104,8 +104,6 @@ public class Character :MonoBehaviourPun
         currentHealth -= dmg;
         currentHealth = Mathf.Clamp(currentHealth, 0, maxHP);
 
-        Debug.Log($"[Character] {gameObject.name} took {dmg} damage, HP = {currentHealth}/{maxHP}");
-
         // Sync health to all clients
         if (photonView != null)
         {

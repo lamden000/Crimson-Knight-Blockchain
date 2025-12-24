@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.InputSystem;
+using Unity.VisualScripting;
 
 public class SkillObject : MonoBehaviour
 {
@@ -87,19 +88,18 @@ public class SkillObject : MonoBehaviour
 
     IEnumerator Projectile()
     {
+        if (target == null) yield break;
+
         Vector2 dir = (Vector2)target.position - (Vector2)transform.position;
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
 
-        // Xoay theo hướng
         transform.rotation = Quaternion.Euler(0, 0, angle + 90f);
 
-        // ---- AUTO FLIP ----
         Vector3 scale = transform.localScale;
         scale.x = Mathf.Abs(scale.x) * (dir.x >= 0 ? -1 : 1);
         transform.localScale = scale;
-        // -------------------
 
-        while (Vector3.Distance(transform.position, target.position) > 1f)
+        while (target != null && Vector3.Distance(transform.position, target.position) > 1f)
         {
             transform.position = Vector3.MoveTowards(
                 transform.position,
@@ -109,8 +109,10 @@ public class SkillObject : MonoBehaviour
             yield return null;
         }
 
-        yield return Explosion();
+        if (target != null)
+            yield return Explosion();
     }
+
 
 
     IEnumerator Homing()
@@ -138,6 +140,17 @@ public class SkillObject : MonoBehaviour
     IEnumerator Explosion()
     {
         exploded = true;
+
+        // Rung camera nếu được bật
+        if (data.shakeCameraOnExplode)
+        {
+            CameraFollow cameraFollow = Camera.main?.GetComponent<CameraFollow>();
+            if (cameraFollow != null)
+            {
+                // Sử dụng duration và magnitude từ SkillObjectData
+                cameraFollow.ShakeCamera(data.cameraShakeDuration, data.cameraShakeMagnitude);
+            }
+        }
 
         if (isExplosive)
         {

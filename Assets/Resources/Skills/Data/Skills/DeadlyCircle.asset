@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 700eb2cc5b9278f419699e6ccdad10e1, type: 3}
   m_Name: DeadlyCircle
   m_EditorClassIdentifier: 
+  icon: {fileID: 7970140216403171786, guid: 65376787a85bbb04ab5a724a0af71dee, type: 3}
   spawnEntries:
   - skillToSpawn: {fileID: 11400000, guid: f6c53bbf89f88304aa7d9ba7cff2e1a8, type: 2}
     chainEntry: 1
@@ -41,3 +42,5 @@ MonoBehaviour:
     burstInterval: 0
     useInterval: 0
     interval: 0
+  cooldown: 5
+  requiresTarget: 1

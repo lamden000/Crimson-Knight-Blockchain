@@ -35,7 +35,7 @@ public class GridmapLoader : MonoBehaviour
     public List<GameObject> spawnPoints = new List<GameObject>();
     private List<TiledObject> pendingMonsters = new List<TiledObject>();
     public List<MonsterMovementController> monsters = new List<MonsterMovementController>();
-    private bool firstLoadDone = false;
+    private bool isFirstLoad = true; // Track lần đầu load map
     private GameObject monsterParent;
     private void Start()
     {
@@ -49,11 +49,66 @@ public class GridmapLoader : MonoBehaviour
         if (!Application.isPlaying && loadInEditMode)
         {
             loadInEditMode = false;
-            // Use LoadMapByName which now wraps the loader with the overlay coroutine.
-            LoadMapByName(jsonFileName, currentOrigin);
+            // Trong editor mode, load đồng bộ (không dùng coroutine vì không playing)
+            LoadMapInEditorModeSync(jsonFileName);
         }
 #endif
     }
+
+#if UNITY_EDITOR
+    private void LoadMapInEditorModeSync(string jsonFileName)
+    {
+        // Unload map hiện tại trước
+        UnloadCurrentMap();
+        
+        // Load map JSON đồng bộ
+        string jsonPath = Path.Combine(Application.streamingAssetsPath, jsonFileName);
+        
+        if (!File.Exists(jsonPath))
+        {
+            Debug.LogError($"❌ File không tồn tại: {jsonPath}");
+            return;
+        }
+
+        string jsonText = File.ReadAllText(jsonPath);
+        map = JsonUtility.FromJson<TiledMap>(jsonText);
+
+        if (map == null)
+        {
+            Debug.LogError($"❌ Không parse được JSON: {jsonFileName}");
+            return;
+        }
+
+        // Load tilesets và layers
+        HashSet<int> usedGids = new HashSet<int>();
+        foreach (var layer in map.layers)
+        {
+            if (layer.type == "tilelayer" && layer.data != null)
+            {
+                foreach (int raw in layer.data)
+                {
+                    int gid = (int)(raw & 0x1FFFFFFF);
+                    if (gid > 0) usedGids.Add(gid);
+                }
+            }
+            else if (layer.type == "objectgroup" && layer.objects != null)
+            {
+                foreach (var obj in layer.objects)
+                {
+                    if (obj.gid > 0) usedGids.Add(obj.gid);
+                }
+            }
+        }
+
+        foreach (var ts in map.tilesets)
+            LoadTileset(ts, usedGids);
+
+        LoadTileLayers();
+        LoadObjectLayers();
+        
+        Debug.Log($"[GridMapLoader] Map loaded in editor mode: {jsonFileName}");
+    }
+#endif
 
     IEnumerator LoadJsonFile(string jsonFileName)
     {
@@ -176,6 +231,9 @@ public class GridmapLoader : MonoBehaviour
 
                 tilemap.SetTile(pos, tile);
 
+                Matrix4x4 transform = GetTileTransform(rawGid);
+                tilemap.SetTransformMatrix(pos, transform);
+
                 if (gridNodes[logicY, x] == null)
                 {
                     Vector3 worldPos = tilemap.CellToWorld(pos);
@@ -187,11 +245,49 @@ public class GridmapLoader : MonoBehaviour
         // --- B2: tạo subgrid chi tiết từ collider thực tế ---
         TileNode[,] subGrid = CreateSubGridFromColliders(gridNodes, subGridDivisions);
 
-        // --- B3: gửi subgrid cho Pathfinder ---
-        Pathfinder.Instance.Init(subGrid);
+        if(Pathfinder.Instance!= null) 
+            Pathfinder.Instance.Init(subGrid);
 
         AdjustBoundaryCollider();
     }
+
+    Matrix4x4 GetTileTransform(uint rawGid)
+    {
+        bool h = (rawGid & 0x80000000) != 0;
+        bool v = (rawGid & 0x40000000) != 0;
+        bool d = (rawGid & 0x20000000) != 0;
+
+        int a, b, c, d2;
+
+        if (!d)
+        {
+            a = h ? -1 : 1;
+            d2 = v ? -1 : 1;
+            b = c = 0;
+        }
+        else
+        {
+            a = 0;
+            b = v ? -1 : 1;
+            c = h ? -1 : 1;
+            d2 = 0;
+        }
+
+        Matrix4x4 m = Matrix4x4.identity;
+        m.m00 = a;
+        m.m01 = b;
+        m.m10 = c;
+        m.m11 = d2;
+
+        // pivot correction (tile center)
+        float px = 0;
+        float py = 0;
+        m.m03 = px - (a * px + b * py);
+        m.m13 = py - (c * px + d2 * py);
+
+        return m;
+    }
+
 
     TileNode[,] CreateSubGridFromColliders(TileNode[,] baseGrid, int subDivisions)
     {
@@ -348,14 +444,26 @@ public class GridmapLoader : MonoBehaviour
 
     IEnumerator LoadMapWithOverlay(string newJsonFileName)
     {
-        // Show overlay and fade to 1
+        // Show overlay
         if (loadingOverlay != null)
         {
             loadingOverlay.gameObject.SetActive(true);
             Color c = loadingOverlay.color;
-            c.a = 0f;
-            loadingOverlay.color = c;
-            yield return StartCoroutine(FadeImageAlpha(0f, 1f, overlayFadeDuration));
+            
+            // Lần đầu load: set alpha = 1 ngay lập tức, không fade
+            if (isFirstLoad)
+            {
+                c.a = 1f;
+                loadingOverlay.color = c;
+                isFirstLoad = false; // Đánh dấu đã load lần đầu
+            }
+            else
+            {
+                // Các lần load sau: fade từ 0 đến 1 như bình thường
+                c.a = 0f;
+                loadingOverlay.color = c;
+                yield return StartCoroutine(FadeImageAlpha(0f, 1f, overlayFadeDuration));
+            }
         }
 
         // Only after overlay reached alpha=1 do we unload the current map so the player
@@ -394,19 +502,38 @@ public class GridmapLoader : MonoBehaviour
 
     void LoadObjectLayers()
     {
-        GameObject colliderParent = new GameObject("Colliders");
-        GameObject npcParent = new GameObject("NPCs");
-        monsterParent = new GameObject("Monsters");
-        GameObject objectParent = new GameObject("Objects");
-		GameObject spawnParent = new GameObject("SpawnPoints");
-		GameObject departParent = new GameObject("DepartPoints");
+        bool isEditorMode = !Application.isPlaying;
+        
+        GameObject colliderParent = null;
+        GameObject npcParent = null;
+        GameObject objectParent = null;
+        GameObject spawnParent = null;
+        GameObject departParent = null;
 
-        colliderParent.transform.SetParent(transform);
-        npcParent.transform.SetParent(transform);
-        monsterParent.transform.SetParent(transform);
-        objectParent.transform.SetParent(transform);
-        spawnParent.transform.SetParent(transform);
-		departParent.transform.SetParent(transform);
+        // Chỉ tạo parent objects nếu không phải editor mode
+        if (!isEditorMode)
+        {
+            colliderParent = new GameObject("Colliders");
+            npcParent = new GameObject("NPCs");
+            monsterParent = new GameObject("Monsters");
+            objectParent = new GameObject("Objects");
+            spawnParent = new GameObject("SpawnPoints");
+            departParent = new GameObject("DepartPoints");
+
+            colliderParent.transform.SetParent(transform);
+            npcParent.transform.SetParent(transform);
+            monsterParent.transform.SetParent(transform);
+            objectParent.transform.SetParent(transform);
+            spawnParent.transform.SetParent(transform);
+            departParent.transform.SetParent(transform);
+        }
+        else
+        {
+            // Editor mode: chỉ tạo parent cho static objects
+            objectParent = new GameObject("Objects");
+            objectParent.transform.SetParent(transform);
+        }
+
         pendingMonsters.Clear();
         foreach (var layer in map.layers)
         {
@@ -415,6 +542,17 @@ public class GridmapLoader : MonoBehaviour
 
             foreach (var obj in layer.objects)
             {
+                // Editor mode: chỉ load static objects
+                if (isEditorMode)
+                {
+                    if (obj.gid > 0 && gidToTile.TryGetValue(obj.gid, out Tile baseTile))
+                    {
+                        CreateStaticObject(obj, baseTile, objectParent.transform);
+                    }
+                    continue;
+                }
+
+                // Play mode: load tất cả
                 switch (obj.type)
                 {
                     case "Collider":
@@ -422,11 +560,11 @@ public class GridmapLoader : MonoBehaviour
                         break;
 
                     case "Water":
-                        CreateColliderBox(obj, true,colliderParent.transform);
+                        CreateColliderBox(obj, true, colliderParent.transform);
                         break;
 
                     case "NPC":
-                        SpawnNPC(obj,npcParent.transform);
+                        SpawnNPC(obj, npcParent.transform);
                         break;
 
                     case "Monster":
@@ -441,7 +579,7 @@ public class GridmapLoader : MonoBehaviour
 
                     default:
                         if (obj.gid > 0 && gidToTile.TryGetValue(obj.gid, out Tile baseTile))
-                            CreateStaticObject(obj, baseTile,objectParent.transform);
+                            CreateStaticObject(obj, baseTile, objectParent.transform);
                         break;
                 }
             }

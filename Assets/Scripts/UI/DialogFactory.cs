@@ -9,6 +9,7 @@ public class DialogFactory : MonoBehaviour
     [SerializeField] private DialogYesNo dialogYesNoPrefab;
     [SerializeField] private DialogOK dialogOKPrefab;
     [SerializeField] private DialogDropdown dialogDropdownPrefab;
+    [SerializeField] private WithdrawDialog withdrawDialogPrefab;
 
     private void Awake()
     {
@@ -29,5 +30,15 @@ public class DialogFactory : MonoBehaviour
     public DialogDropdown CreateDropdown()
     {
         return Instantiate(dialogDropdownPrefab, mainCanvas.transform, false);
+    }
+
+    public WithdrawDialog CreateWithdrawDialog()
+    {
+        if (withdrawDialogPrefab == null)
+        {
+            Debug.LogError("[DialogFactory] WithdrawDialog prefab is not assigned!");
+            return null;
+        }
+        return Instantiate(withdrawDialogPrefab, mainCanvas.transform, false);
     }
 }

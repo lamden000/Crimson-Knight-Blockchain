@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 700eb2cc5b9278f419699e6ccdad10e1, type: 3}
   m_Name: FlameTrail
   m_EditorClassIdentifier: 
+  icon: {fileID: -2795207745818904963, guid: c3268af55e839d94780649a20ef78ee9, type: 3}
   spawnEntries:
   - skillToSpawn: {fileID: 11400000, guid: 7c93ba72434498a4b94fb1f675123558, type: 2}
     chainEntry: 0
@@ -27,3 +28,5 @@ MonoBehaviour:
     burstInterval: 0
     useInterval: 0
     interval: 0
+  cooldown: 1
+  requiresTarget: 1

@@ -28,5 +28,12 @@ public class SkillObjectData : ScriptableObject
     public float speed = 100f;
     public float explosionDelay = 0f;
 
+    [Header("Camera Shake")]
+    public bool shakeCameraOnExplode = false; // Skill có làm camera rung khi explode không
+    [Tooltip("Thời gian rung camera (giây)")]
+    public float cameraShakeDuration = 0.2f;
+    [Tooltip("Độ mạnh rung camera (càng lớn càng mạnh)")]
+    public float cameraShakeMagnitude = 0.15f;
+
     public Vector3 scale = Vector3.one;
 }

@@ -169,12 +169,12 @@ TextureImporter:
       name: 1030_0
       rect:
         serializedVersion: 2
-        x: 6
+        x: 0
         y: 320
-        width: 64
-        height: 74
-      alignment: 0
-      pivot: {x: 0, y: 0}
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.48252994, y: 0.13894692}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -191,12 +191,12 @@ TextureImporter:
       name: 1030_1
       rect:
         serializedVersion: 2
-        x: 8
+        x: 0
         y: 240
-        width: 64
-        height: 68
-      alignment: 0
-      pivot: {x: 0, y: 0}
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.5174705, y: 0.15641709}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -213,12 +213,12 @@ TextureImporter:
       name: 1030_2
       rect:
         serializedVersion: 2
-        x: 6
-        y: 166
-        width: 68
-        height: 64
-      alignment: 0
-      pivot: {x: 0, y: 0}
+        x: 0
+        y: 160
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.49999994, y: 0.17971095}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -235,12 +235,12 @@ TextureImporter:
       name: 1030_3
       rect:
         serializedVersion: 2
-        x: 8
-        y: 84
-        width: 68
-        height: 72
-      alignment: 0
-      pivot: {x: 0, y: 0}
+        x: 0
+        y: 80
+        width: 80
+        height: 80
+      alignment: 9
+      pivot: {x: 0.4883533, y: 0.17388745}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -258,11 +258,11 @@ TextureImporter:
       rect:
         serializedVersion: 2
         x: 0
-        y: 3
+        y: 0
         width: 80
-        height: 72
-      alignment: 0
-      pivot: {x: 0, y: 0}
+        height: 80
+      alignment: 9
+      pivot: {x: 0.49417663, y: 0.1680639}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
@@ -275,121 +275,11 @@ TextureImporter:
       indices: 
       edges: []
       weights: []
-    - serializedVersion: 2
-      name: 1030_5
-      rect:
-        serializedVersion: 2
-        x: 42
-        y: 69
-        width: 7
-        height: 8
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: fd8dbc529e7443fe0800000000000000
-      internalID: -1210263333168752417
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: 1030_6
-      rect:
-        serializedVersion: 2
-        x: 55
-        y: 65
-        width: 8
-        height: 12
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: d89ec8357241076e0800000000000000
-      internalID: -1841950088456509043
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: 1030_7
-      rect:
-        serializedVersion: 2
-        x: 0
-        y: 52
-        width: 10
-        height: 8
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b34b655fb0ad8df60800000000000000
-      internalID: 8059431278075098171
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: 1030_8
-      rect:
-        serializedVersion: 2
-        x: 1
-        y: 18
-        width: 6
-        height: 7
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b0a6409cc0502fdd0800000000000000
-      internalID: -2453893294493242869
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: 1030_9
-      rect:
-        serializedVersion: 2
-        x: 18
-        y: 2
-        width: 7
-        height: 7
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: 45b3c21afc08acca0800000000000000
-      internalID: -5995838324639777964
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
     outline: []
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 790dcedd03d7aaa42aa0948f92db4cdf
     internalID: 0
     vertices: []
     indices: 
@@ -404,11 +294,6 @@ TextureImporter:
       1030_2: -930887260624834712
       1030_3: -2090352282474244570
       1030_4: 5704267621369293650
-      1030_5: -1210263333168752417
-      1030_6: -1841950088456509043
-      1030_7: 8059431278075098171
-      1030_8: -2453893294493242869
-      1030_9: -5995838324639777964
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

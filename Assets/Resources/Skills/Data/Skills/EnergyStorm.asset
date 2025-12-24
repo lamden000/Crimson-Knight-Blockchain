@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 700eb2cc5b9278f419699e6ccdad10e1, type: 3}
   m_Name: EnergyStorm
   m_EditorClassIdentifier: 
+  icon: {fileID: 8949269620885550159, guid: bc0e113480cf3534ca371186a60598d2, type: 3}
   spawnEntries:
   - skillToSpawn: {fileID: 11400000, guid: 540add3c27b09344fa1d0cdaed5c6078, type: 2}
     chainEntry: 0
@@ -27,3 +28,5 @@ MonoBehaviour:
     burstInterval: 0.7
     useInterval: 0
     interval: 0
+  cooldown: 5
+  requiresTarget: 0

@@ -165,7 +165,13 @@ public class AuthenticationManager : MonoBehaviour
 
         PlayerDataManager.Instance.Initialize(data);
 
-        SceneManager.LoadScene("Test_Lam");
+        // Load inventory từ PlayFab sau khi login thành công
+        if (InventoryManager.Instance != null)
+        {
+            InventoryManager.Instance.LoadInventoryFromPlayFab();
+        }
+
+        SceneManager.LoadScene("Main");
     }
 
 

@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee43a62a0218def45b760be1804dfab7, type: 3}
   m_Name: GammaMeteor
   m_EditorClassIdentifier: 
-  skillName: Gamma Meteor
   mainLoop: 1
   autoDisableAfterMain: 0
   mainFrames:
@@ -31,9 +30,14 @@ MonoBehaviour:
   sparkleFPS: 12
   aftermathFrames:
   - {fileID: 843515851, guid: 15b6dd84f2df2aa4896234e0e13a2b58, type: 3}
+  aftermathPlayTime: 0
+  aftermathLoop: 0
   aftermathFPS: 5
   explosionRotatesWithMovement: 1
   autoExplosionTime: 10
   speed: 500
   explosionDelay: 0
+  shakeCameraOnExplode: 1
+  cameraShakeDuration: 0.2
+  cameraShakeMagnitude: 0.15
   scale: {x: 1, y: 1, z: 1}
