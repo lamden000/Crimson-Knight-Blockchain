@@ -13,7 +13,8 @@ public enum Rarity
 {
     Common,
     Limited,
-    Rare
+    Rare,
+    currency,
 }
 
 public abstract class ItemData : ScriptableObject

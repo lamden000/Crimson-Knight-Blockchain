@@ -81,7 +81,9 @@ public class ItemInfoPanel : MonoBehaviour
     /// <summary>
     /// Hiển thị thông tin item
     /// </summary>
-    public void ShowItemInfo(ItemData itemData)
+    /// <param name="itemData">ItemData của item</param>
+    /// <param name="isFromWallet">True nếu item từ wallet inventory (đã withdraw), false nếu từ inventory thường</param>
+    public void ShowItemInfo(ItemData itemData, bool isFromWallet = false)
     {
         if (itemData == null)
         {
@@ -119,10 +121,21 @@ public class ItemInfoPanel : MonoBehaviour
                 : itemData.description;
         }
 
-        // Update withdraw button - chỉ enable nếu item withdrawable
+        // Update withdraw button
+        // - Disable nếu item từ wallet (đã withdraw rồi)
+        // - Enable nếu item từ inventory thường và có thể withdraw
         if (withdrawButton != null)
         {
-            withdrawButton.interactable = itemData.withdrawable;
+            if (isFromWallet)
+            {
+                // Item từ wallet - đã withdraw rồi, không thể withdraw lại
+                withdrawButton.interactable = false;
+            }
+            else
+            {
+                // Item từ inventory thường - enable nếu có thể withdraw
+                withdrawButton.interactable = itemData.withdrawable;
+            }
         }
 
         // Hiển thị panel
@@ -173,8 +186,9 @@ public class ItemInfoPanel : MonoBehaviour
         Debug.Log($"[ItemInfoPanel] Withdrawing {quantity}x item {itemID} to wallet: {walletAddress}");
         
         // Xóa item khỏi inventory
-        if (InventoryManager.Instance != null)
+        if (InventoryManager.Instance != null&& WithdrawManager.Instance!=null)
         {
+            WithdrawManager.Instance.WithdrawItem(itemID);
             InventoryManager.Instance.RemoveItem(itemID, quantity);
         }
     }

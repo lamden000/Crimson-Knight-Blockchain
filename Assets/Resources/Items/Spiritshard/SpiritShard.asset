@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb2daed4547d2d745b7d335b716c7ce8, type: 3}
+  m_Name: SpiritShard
+  m_EditorClassIdentifier: 
+  itemID: 2
+  itemName: Spirit Shard
+  description: Shattered spirit from a defeated foe, worth 5 spirit shards
+  icon: {fileID: 4116821633884018459, guid: 5297fbe2368dcac45b0d23fafa98d470, type: 3}
+  category: 0
+  rarity: 3
+  withdrawable: 1
+  nftContractAddress: 0x540aB8468a80D9666C7b8DD26AcBC61FE7262337
+  metadataCID: 
+  coinValue: 5

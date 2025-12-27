@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Link Wallet - MetaMask</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-box.info {
+            border-left-color: #3498db;
+            background: #eef;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .wallet-info {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .button-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .network-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .file-protocol-warning {
+            background: #fee;
+            border-left: 4px solid #e74c3c;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 Link Wallet</h1>
+        <p class="subtitle">Kết nối MetaMask để liên kết ví với game</p>
+
+        <div id="fileProtocolWarning" class="file-protocol-warning" style="display: none;">
+            <div class="status-text">
+                <strong>⚠️ Cảnh báo:</strong> Đang chạy từ file:// - MetaMask sẽ không hoạt động!<br><br>
+                <strong>Giải pháp:</strong><br>
+                1. Mở Terminal/PowerShell trong thư mục chứa file này<br>
+                2. Chạy: <code>python -m http.server 8000</code><br>
+                3. Mở trình duyệt: <code>http://localhost:8000</code>
+            </div>
+        </div>
+
+        <div id="statusBox" class="status-box info">
+            <div class="status-text">Đang chờ kết nối MetaMask...</div>
+        </div>
+
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <strong>Địa chỉ ví:</strong>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="network-info" id="networkInfo"></div>
+        </div>
+
+        <button id="connectBtn" onclick="connectWallet()">🔗 Kết nối MetaMask</button>
+        <button id="confirmBtn" onclick="confirmLinkWallet()" disabled>✅ Xác nhận liên kết ví</button>
+    </div>
+
+    <script>
+        let web3;
+        let userAccount;
+        let walletAddress = '';
+
+        // Kiểm tra protocol khi load
+        function checkProtocolOnLoad() {
+            if (window.location.protocol === 'file:') {
+                document.getElementById('fileProtocolWarning').style.display = 'block';
+                showStatus('⚠️ Đang chạy từ file:// - Vui lòng chạy qua HTTP server!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // Hiển thị status
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.querySelector('.status-text').textContent = message;
+        }
+
+        // Kết nối MetaMask (luôn hiển thị popup)
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask chưa được cài đặt! Vui lòng cài đặt MetaMask extension.', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
+
+                // Disable button để tránh click nhiều lần
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Kiểm tra và disconnect permissions trước để force popup
+                try {
+                    // Kiểm tra xem đã có permissions chưa
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    // Nếu đã có permissions, revoke để force popup mới
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            showStatus('⏳ Đã ngắt kết nối. Vui lòng xác nhận lại trong popup MetaMask...', 'info');
+                            // Đợi một chút để MetaMask xử lý
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (disconnectError) {
+                            console.log('Cannot revoke permissions:', disconnectError);
+                            // Nếu không hỗ trợ, vẫn tiếp tục
+                        }
+                    }
+                } catch (e) {
+                    // Nếu không hỗ trợ wallet_getPermissions, bỏ qua
+                    console.log('wallet_getPermissions not supported, continuing...');
+                }
+
+                // Luôn dùng eth_requestAccounts để hiển thị popup xác nhận
+                // Sau khi revoke permissions, request mới sẽ luôn hiển thị popup
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                // Kiểm tra user có từ chối không
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+
+                userAccount = accounts[0];
+                walletAddress = userAccount;
+
+                // Khởi tạo Web3
+                web3 = new Web3(window.ethereum);
+
+                // Hiển thị thông tin ví
+                document.getElementById('walletAddress').textContent = userAccount;
+                document.getElementById('walletInfo').style.display = 'block';
+
+                // Lấy network info
+                const chainId = await web3.eth.getChainId();
+                const networkNames = {
+                    1: 'Ethereum Mainnet',
+                    5: 'Goerli Testnet',
+                    11155111: 'Sepolia Testnet',
+                    80001: 'Mumbai Testnet',
+                    80002: 'Polygon Amoy Testnet',
+                    137: 'Polygon Mainnet',
+                    1337: 'Localhost',
+                    31337: 'Hardhat'
+                };
+                const networkName = networkNames[chainId] || `Chain ID: ${chainId}`;
+                document.getElementById('networkInfo').textContent = `Network: ${networkName}`;
+
+                // Enable confirm button
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
+                document.getElementById('confirmBtn').disabled = false;
+
+                showStatus(`✅ Đã kết nối! Địa chỉ: ${userAccount.substring(0, 6)}...${userAccount.substring(38)}`, 'success');
+
+                // Listen for account changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length === 0) {
+                        showStatus('⚠️ MetaMask đã bị ngắt kết nối', 'error');
+                        location.reload();
+                    } else {
+                        userAccount = accounts[0];
+                        walletAddress = userAccount;
+                        document.getElementById('walletAddress').textContent = userAccount;
+                        showStatus('✅ Đã chuyển đổi tài khoản', 'success');
+                    }
+                });
+
+                // Listen for network changes
+                window.ethereum.on('chainChanged', () => {
+                    location.reload();
+                });
+
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                
+                // Reset button
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                // Xử lý các loại lỗi khác nhau
+                if (error.code === 4001) {
+                    // User rejected the request
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    // Request already pending
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask... Vui lòng kiểm tra popup MetaMask.', 'info');
+                    // Đợi một chút rồi thử lại
+                    setTimeout(() => {
+                        document.getElementById('connectBtn').disabled = false;
+                        document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    }, 2000);
+                } else {
+                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Xác nhận liên kết ví
+        async function confirmLinkWallet() {
+            if (!walletAddress) {
+                showStatus('❌ Vui lòng kết nối MetaMask trước!', 'error');
+                return;
+            }
+
+            try {
+                showStatus('⏳ Đang lưu địa chỉ ví...', 'info');
+                document.getElementById('confirmBtn').disabled = true;
+                document.getElementById('confirmBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Lưu wallet address vào file để Unity đọc
+                // Format: wallet_address.txt với nội dung là địa chỉ ví
+                const walletData = {
+                    address: walletAddress,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Tạo blob và download file (Unity sẽ đọc file này)
+                const blob = new Blob([walletAddress], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'wallet_address.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showStatus('✅ Đã lưu địa chỉ ví! Vui lòng quay lại game.', 'success');
+                
+                // Đợi một chút rồi đóng cửa sổ (nếu được mở từ Unity)
+                setTimeout(() => {
+                    // Thử đóng cửa sổ nếu được mở bởi script
+                    if (window.opener) {
+                        window.close();
+                    }
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error saving wallet address:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                document.getElementById('confirmBtn').innerHTML = '✅ Xác nhận liên kết ví';
+                document.getElementById('confirmBtn').disabled = false;
+            }
+        }
+
+        // Kiểm tra protocol khi load (không auto-connect)
+        window.addEventListener('load', () => {
+            checkProtocolOnLoad();
+        });
+    </script>
+</body>
+</html>
+

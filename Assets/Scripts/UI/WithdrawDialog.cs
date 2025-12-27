@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.IO;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -13,7 +15,8 @@ public class WithdrawDialog : DialogBase
     [SerializeField] private TextMeshProUGUI minText; // Text hiển thị min (luôn = 1)
     [SerializeField] private TextMeshProUGUI maxText; // Text hiển thị max (số lượng item)
     [SerializeField] private TextMeshProUGUI currentText; // Text hiển thị giá trị slider hiện tại
-    [SerializeField] private TMP_InputField walletAddressInput; // Input field để nhập địa chỉ ví
+    [SerializeField] private TMP_InputField walletAddressInput; // Input field để hiển thị địa chỉ ví (readonly)
+    [SerializeField] private Button linkWalletButton; // Button để link wallet (chỉ hiển thị khi chưa có ví)
     [SerializeField] private Button closeButton; // Button để đóng dialog
     [SerializeField] private Button confirmButton; // Button để confirm withdraw
 
@@ -62,6 +65,15 @@ public class WithdrawDialog : DialogBase
             walletAddressInput = GetComponentInChildren<TMP_InputField>();
         }
 
+        if (linkWalletButton == null)
+        {
+            Transform linkWalletTransform = transform.Find("LinkWalletButton");
+            if (linkWalletTransform != null)
+            {
+                linkWalletButton = linkWalletTransform.GetComponent<Button>();
+            }
+        }
+
         if (closeButton == null)
         {
             Transform closeTransform = transform.Find("CloseButton");
@@ -91,6 +103,12 @@ public class WithdrawDialog : DialogBase
         }
 
         // Setup buttons
+        if (linkWalletButton != null)
+        {
+            linkWalletButton.onClick.RemoveAllListeners();
+            linkWalletButton.onClick.AddListener(OnLinkWalletClicked);
+        }
+
         if (closeButton != null)
         {
             closeButton.onClick.RemoveAllListeners();
@@ -135,12 +153,12 @@ public class WithdrawDialog : DialogBase
 
         UpdateCurrentText(1);
 
-        // Load wallet address từ PlayFab
+        // Load wallet address từ PlayFab và update UI
         LoadWalletAddress();
     }
 
     /// <summary>
-    /// Load wallet address từ PlayFab
+    /// Load wallet address từ PlayFab và update UI
     /// </summary>
     private void LoadWalletAddress()
     {
@@ -150,7 +168,7 @@ public class WithdrawDialog : DialogBase
             
             if (!string.IsNullOrEmpty(walletAddress))
             {
-                // Đã có wallet address, set readonly
+                // Đã có wallet address
                 isWalletAddressLocked = true;
                 if (walletAddressInput != null)
                 {
@@ -158,19 +176,114 @@ public class WithdrawDialog : DialogBase
                     walletAddressInput.readOnly = true;
                     walletAddressInput.interactable = false;
                 }
+
+                // Ẩn nút Link Wallet (đã có ví rồi)
+                if (linkWalletButton != null)
+                {
+                    linkWalletButton.gameObject.SetActive(false);
+                }
+
+                // Enable confirm button
+                if (confirmButton != null)
+                {
+                    confirmButton.interactable = true;
+                }
             }
             else
             {
-                // Chưa có wallet address, cho phép nhập
+                // Chưa có wallet address
                 isWalletAddressLocked = false;
                 if (walletAddressInput != null)
                 {
-                    walletAddressInput.text = "";
-                    walletAddressInput.readOnly = false;
-                    walletAddressInput.interactable = true;
+                    walletAddressInput.text = "Chưa liên kết ví";
+                    walletAddressInput.readOnly = true;
+                    walletAddressInput.interactable = false;
+                }
+
+                // Hiển thị nút Link Wallet
+                if (linkWalletButton != null)
+                {
+                    linkWalletButton.gameObject.SetActive(true);
+                }
+
+                // Disable confirm button (cần link wallet trước)
+                if (confirmButton != null)
+                {
+                    confirmButton.interactable = false;
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Xử lý khi click Link Wallet button
+    /// </summary>
+    private void OnLinkWalletClicked()
+    {
+        // Mở trang link wallet
+        if (WithdrawManager.Instance != null)
+        {
+            WithdrawManager.Instance.OpenLinkWalletPage();
+            
+            // Bắt đầu check file wallet address
+            StartCoroutine(CheckWalletAddressFile());
+        }
+        else
+        {
+            Debug.LogError("[WithdrawDialog] WithdrawManager.Instance is null!");
+        }
+    }
+
+    /// <summary>
+    /// Coroutine để check file wallet address sau khi user link wallet
+    /// </summary>
+    private System.Collections.IEnumerator CheckWalletAddressFile()
+    {
+        string downloadsPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + "\\Downloads";
+        string walletFilePath = Path.Combine(downloadsPath, "wallet_address.txt");
+
+        float timeout = 60f; // Timeout sau 60 giây
+        float elapsed = 0f;
+        float checkInterval = 0.5f; // Check mỗi 0.5 giây
+
+        while (elapsed < timeout)
+        {
+            if (File.Exists(walletFilePath))
+            {
+                try
+                {
+                    string walletAddress = File.ReadAllText(walletFilePath).Trim();
+                    
+                    if (!string.IsNullOrEmpty(walletAddress))
+                    {
+                        Debug.Log($"[WithdrawDialog] Đã đọc wallet address từ file: {walletAddress}");
+                        
+                        // Lưu vào PlayFab
+                        if (InventoryManager.Instance != null)
+                        {
+                            InventoryManager.Instance.SaveWalletAddress(walletAddress);
+                        }
+
+                        // Xóa file sau khi đọc
+                        File.Delete(walletFilePath);
+
+                        // Update UI
+                        LoadWalletAddress();
+
+                        yield break;
+                    }
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError($"[WithdrawDialog] Lỗi đọc file wallet address: {e.Message}");
+                }
+            }
+
+            yield return new WaitForSeconds(checkInterval);
+            elapsed += checkInterval;
+        }
+
+        Debug.LogWarning("[WithdrawDialog] Timeout khi chờ file wallet address!");
     }
 
     /// <summary>
@@ -205,28 +318,15 @@ public class WithdrawDialog : DialogBase
         }
 
         int quantity = Mathf.RoundToInt(quantitySlider != null ? quantitySlider.value : 1);
-        string walletAddress = walletAddressInput != null ? walletAddressInput.text : "";
+        
+        // Lấy wallet address từ PlayFab (đã được lưu khi link wallet)
+        string walletAddress = InventoryManager.Instance?.GetWalletAddress() ?? "";
 
         // Validate wallet address
         if (string.IsNullOrEmpty(walletAddress))
         {
-            Debug.LogWarning("[WithdrawDialog] Wallet address is empty!");
-            // Có thể hiển thị error message cho user
+            Debug.LogWarning("[WithdrawDialog] Wallet address is empty! Vui lòng link wallet trước.");
             return;
-        }
-
-        // Nếu chưa có wallet address, lưu vào PlayFab
-        if (!isWalletAddressLocked && InventoryManager.Instance != null)
-        {
-            InventoryManager.Instance.SaveWalletAddress(walletAddress);
-            isWalletAddressLocked = true;
-            
-            // Lock input field
-            if (walletAddressInput != null)
-            {
-                walletAddressInput.readOnly = true;
-                walletAddressInput.interactable = false;
-            }
         }
 
         // Gọi callback

@@ -12,9 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: faf58598c1227eb4c84de138b7a791c6, type: 3}
   m_Name: 1054
   m_EditorClassIdentifier: 
-  maxHP: 50
+  maxHP: 1
   damage: 10
   moveSpeed: 100
   dropTable:
-  - item: {fileID: 11400000, guid: 54894ad0dba3ace4cb019d9dbe88078a, type: 2}
-    dropRate: 0.49
+  - item: {fileID: 11400000, guid: 0658154da3e420b42bac76379e43ab29, type: 2}
+    dropRate: 1

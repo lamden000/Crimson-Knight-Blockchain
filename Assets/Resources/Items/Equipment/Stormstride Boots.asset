@@ -18,6 +18,7 @@ MonoBehaviour:
     at every step.
   icon: {fileID: 21300000, guid: 9b3bc3ddd9851b749a68e7793123641b, type: 3}
   category: 1
+  rarity: 2
   withdrawable: 1
   nftContractAddress: 0x02DF0ccd422e6126C0Fd30a203B950eB0015d08A
   metadataCID: bafkreia6ipvt3gjd54tv4ocio4ng7nnwzvhay2o7ispeeuzoay5q3sxzpy

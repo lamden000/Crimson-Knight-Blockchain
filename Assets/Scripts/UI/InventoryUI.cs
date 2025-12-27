@@ -12,6 +12,7 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Transform contentContainer; // Container trong ScrollView để chứa item slots
     [SerializeField] private GameObject inventorySlotPrefab; // Prefab cho mỗi item slot (InventorySlot.prefab)
     [SerializeField] private ItemInfoPanel itemInfoPanel; // Panel hiển thị thông tin item
+    [SerializeField] private WalletInventoryUI walletInventoryUI; // Reference tới WalletInventoryUI
     
     [Header("Settings")]
     [SerializeField] private KeyCode toggleKey = KeyCode.I; // Phím để bật/tắt inventory
@@ -31,6 +32,12 @@ public class InventoryUI : MonoBehaviour
         if (itemInfoPanel == null)
         {
             itemInfoPanel = FindAnyObjectByType<ItemInfoPanel>();
+        }
+
+        // Tự động tìm WalletInventoryUI nếu chưa được assign
+        if (walletInventoryUI == null)
+        {
+            walletInventoryUI = FindAnyObjectByType<WalletInventoryUI>();
         }
 
         // Đăng ký event từ InventoryManager
@@ -82,6 +89,19 @@ public class InventoryUI : MonoBehaviour
         if (inventoryPanel != null)
         {
             inventoryPanel.SetActive(isInventoryOpen);
+        }
+
+        // Đồng bộ với wallet inventory UI
+        if (walletInventoryUI != null)
+        {
+            if (isInventoryOpen)
+            {
+                walletInventoryUI.ShowWalletInventory();
+            }
+            else
+            {
+                walletInventoryUI.HideWalletInventory();
+            }
         }
 
         // Refresh UI khi mở inventory
