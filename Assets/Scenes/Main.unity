@@ -27438,9 +27438,61 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4288431912416608617, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_Name
       value: Canvas
+      objectReference: {fileID: 0}
+    - target: {fileID: 5816266866968525663, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6759451295614742183, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_HorizontalAlignment
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7821438657838438745, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 68.1492
+      objectReference: {fileID: 0}
+    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 21.4775
+      objectReference: {fileID: 0}
+    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -2.8982
+      objectReference: {fileID: 0}
+    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 40.2
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -27833,6 +27885,7 @@ GameObject:
   - component: {fileID: 1572721658}
   - component: {fileID: 1572721659}
   - component: {fileID: 1572721660}
+  - component: {fileID: 1572721661}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -27926,7 +27979,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultContractAddress: 
+  gameTokenContractAddress: 0xe2ed4800e710605fa8225BDb7f4e8F6e13F8bD32
   withdrawWebPath: WithdrawWeb/index.html
+  withdrawCoinWebPath: WithdrawWeb/withdraw-coin.html
   linkWalletWebPath: WithdrawWeb/link-wallet.html
   useLocalhost: 1
   localhostPort: 8000
@@ -27945,6 +28000,23 @@ MonoBehaviour:
   alchemyApiKey: eQMwPXs4A8OF-f9jmKLFD
   alchemyBaseUrl: https://polygon-amoy.g.alchemy.com/v2
   rareItemContractAddress: 0x02DF0ccd422e6126C0Fd30a203B950eB0015d08A
+  refreshCooldown: 5
+--- !u!114 &1572721661
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1572721652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 111f92a99ef4da642adf6d338be2430a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  alchemyApiKey: eQMwPXs4A8OF-f9jmKLFD
+  alchemyBaseUrl: https://polygon-amoy.g.alchemy.com/v2
+  gameTokenContractAddress: 0xe2ed4800e710605fa8225BDb7f4e8F6e13F8bD32
+  tokenDecimals: 18
   refreshCooldown: 5
 --- !u!114 &1586660885 stripped
 MonoBehaviour:

@@ -17,7 +17,11 @@ MonoBehaviour:
   description: A pair of fine iron shoe, provide basic protection
   icon: {fileID: -1089702924028394589, guid: a98ec88d97c31b84eb8f28822e059ffe, type: 3}
   category: 1
+  rarity: 0
   withdrawable: 0
-  slot: 3
+  nftContractAddress: 
+  metadataCID: 
+  slot: 6
   defense: 0
   stylePoints: 0
+  variantId: 0

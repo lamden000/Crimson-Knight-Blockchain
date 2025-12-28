@@ -13,6 +13,9 @@ public class ItemInfoPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI nameText; // Text để hiển thị tên item
     [SerializeField] private TextMeshProUGUI descriptionText; // Text để hiển thị description
     [SerializeField] private Button withdrawButton; // Button để withdraw item
+    [SerializeField] private Button useButton; // Button để use/unequip item (cho EquipmentItem)
+    [SerializeField] private TextMeshProUGUI useButtonText; // Text component của useButton để đổi text
+    [SerializeField] private Image useButtonBackground; // Image background của useButton để đổi màu
 
     private void Awake()
     {
@@ -62,15 +65,55 @@ public class ItemInfoPanel : MonoBehaviour
             }
         }
 
+        if (useButton == null)
+        {
+            Transform useTransform = transform.Find("UseButton");
+            if (useTransform != null)
+            {
+                useButton = useTransform.GetComponent<Button>();
+            }
+        }
+
+        // Tự động tìm useButtonText và useButtonBackground
+        if (useButton != null)
+        {
+            // Tìm TextMeshProUGUI trong useButton
+            if (useButtonText == null)
+            {
+                useButtonText = useButton.GetComponentInChildren<TextMeshProUGUI>();
+            }
+
+            // Tìm Image background của useButton (thường là Image component của chính button)
+            if (useButtonBackground == null)
+            {
+                useButtonBackground = useButton.GetComponent<Image>();
+            }
+
+            // Lưu màu gốc của button
+            if (useButtonBackground != null)
+            {
+                originalButtonColor = useButtonBackground.color;
+            }
+        }
+
         // Setup withdraw button click
         if (withdrawButton != null)
         {
             withdrawButton.onClick.RemoveAllListeners();
             withdrawButton.onClick.AddListener(OnWithdrawButtonClicked);
         }
+
+        // Setup use button click
+        if (useButton != null)
+        {
+            useButton.onClick.RemoveAllListeners();
+            // Sẽ được set động trong ShowItemInfo dựa trên isFromEquipping
+        }
     }
 
     private ItemData currentItemData;
+    private bool currentItemIsFromWallet = false; // Track item hiện tại có từ wallet không
+    private Color originalButtonColor = Color.white; // Lưu màu gốc của button
 
     private void Start()
     {
@@ -83,7 +126,8 @@ public class ItemInfoPanel : MonoBehaviour
     /// </summary>
     /// <param name="itemData">ItemData của item</param>
     /// <param name="isFromWallet">True nếu item từ wallet inventory (đã withdraw), false nếu từ inventory thường</param>
-    public void ShowItemInfo(ItemData itemData, bool isFromWallet = false)
+    /// <param name="isFromEquipping">True nếu item từ equipping tab</param>
+    public void ShowItemInfo(ItemData itemData, bool isFromWallet = false, bool isFromEquipping = false)
     {
         if (itemData == null)
         {
@@ -92,6 +136,7 @@ public class ItemInfoPanel : MonoBehaviour
         }
 
         currentItemData = itemData;
+        currentItemIsFromWallet = isFromWallet; // Lưu flag isFromWallet
 
         // Update icon
         if (iconImage != null)
@@ -122,19 +167,69 @@ public class ItemInfoPanel : MonoBehaviour
         }
 
         // Update withdraw button
-        // - Disable nếu item từ wallet (đã withdraw rồi)
+        // - Disable nếu item từ wallet (đã withdraw rồi) hoặc từ equipping tab
         // - Enable nếu item từ inventory thường và có thể withdraw
         if (withdrawButton != null)
         {
-            if (isFromWallet)
+            if (isFromWallet || isFromEquipping)
             {
-                // Item từ wallet - đã withdraw rồi, không thể withdraw lại
+                // Item từ wallet hoặc equipping tab - không thể withdraw
                 withdrawButton.interactable = false;
             }
             else
             {
                 // Item từ inventory thường - enable nếu có thể withdraw
                 withdrawButton.interactable = itemData.withdrawable;
+            }
+        }
+
+        // Update use button
+        // - Hiển thị cho EquipmentItem (từ inventory thường, equipping tab, hoặc wallet)
+        if (useButton != null)
+        {
+            bool isEquipment = itemData is EquipmentItem;
+            bool shouldShow = isEquipment; // Cho phép use từ cả wallet
+            
+            useButton.gameObject.SetActive(shouldShow);
+            useButton.interactable = shouldShow;
+
+            if (shouldShow)
+            {
+                // Setup button dựa trên isFromEquipping
+                if (isFromEquipping)
+                {
+                    // Item từ equipping tab - đổi thành "Unequip" và màu đỏ
+                    if (useButtonText != null)
+                    {
+                        useButtonText.text = "Unequip";
+                    }
+
+                    if (useButtonBackground != null)
+                    {
+                        useButtonBackground.color = Color.red;
+                    }
+
+                    // Setup click handler cho unequip
+                    useButton.onClick.RemoveAllListeners();
+                    useButton.onClick.AddListener(OnUnequipButtonClicked);
+                }
+                else
+                {
+                    // Item từ inventory thường hoặc wallet - giữ nguyên "Use" và màu mặc định
+                    if (useButtonText != null)
+                    {
+                        useButtonText.text = "Use";
+                    }
+
+                    if (useButtonBackground != null)
+                    {
+                        useButtonBackground.color = originalButtonColor; // Khôi phục màu gốc
+                    }
+
+                    // Setup click handler cho use
+                    useButton.onClick.RemoveAllListeners();
+                    useButton.onClick.AddListener(OnUseButtonClicked);
+                }
             }
         }
 
@@ -178,6 +273,116 @@ public class ItemInfoPanel : MonoBehaviour
     }
 
     /// <summary>
+    /// Xử lý khi click use button
+    /// </summary>
+    private void OnUseButtonClicked()
+    {
+        if (currentItemData == null)
+        {
+            return;
+        }
+
+        // Chỉ xử lý cho EquipmentItem
+        if (currentItemData is EquipmentItem equipmentItem)
+        {
+            if (currentItemIsFromWallet)
+            {
+                // Item từ wallet - không xóa khỏi wallet, chỉ equip
+                EquippingUI equippingUI = FindAnyObjectByType<EquippingUI>();
+                if (equippingUI != null)
+                {
+                    // Equip item vào equipping tab với flag isFromWallet = true
+                    equippingUI.EquipItem(equipmentItem, 1, isFromWallet: true);
+                }
+                else
+                {
+                    Debug.LogWarning("[ItemInfoPanel] EquippingUI not found! Cannot equip item.");
+                }
+            }
+            else
+            {
+                // Item từ inventory thường - kiểm tra số lượng
+                int currentQuantity = InventoryManager.Instance?.GetItemQuantity(currentItemData.itemID) ?? 0;
+                if (currentQuantity <= 0)
+                {
+                    Debug.LogWarning("[ItemInfoPanel] Cannot use: no items available!");
+                    return;
+                }
+
+                // Chuyển item sang equipping tab
+                EquippingUI equippingUI = FindAnyObjectByType<EquippingUI>();
+                if (equippingUI != null)
+                {
+                    // Xóa 1 item khỏi inventory
+                    InventoryManager.Instance?.RemoveItem(currentItemData.itemID, 1);
+                    
+                    // Equip item vào equipping tab với flag isFromWallet = false
+                    equippingUI.EquipItem(equipmentItem, 1, isFromWallet: false);
+                    
+                    // Refresh inventory UI để cập nhật số lượng
+                    if (InventoryUI.Instance != null)
+                    {
+                        InventoryUI.Instance.RefreshInventoryUI();
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning("[ItemInfoPanel] EquippingUI not found! Cannot equip item.");
+                }
+            }
+
+            // Ẩn panel sau khi sử dụng
+            Hide();
+        }
+        else
+        {
+            Debug.LogWarning("[ItemInfoPanel] Item is not an EquipmentItem!");
+        }
+    }
+
+    /// <summary>
+    /// Xử lý khi click unequip button
+    /// </summary>
+    private void OnUnequipButtonClicked()
+    {
+        if (currentItemData == null)
+        {
+            return;
+        }
+
+        // Chỉ xử lý cho EquipmentItem
+        if (currentItemData is EquipmentItem equipmentItem)
+        {
+            EquippingUI equippingUI = FindAnyObjectByType<EquippingUI>();
+            if (equippingUI != null)
+            {
+                // Unequip item
+                equippingUI.UnequipItem(equipmentItem.slot);
+                
+                // Refresh equipping UI
+                equippingUI.RefreshEquippedItems();
+                
+                // Refresh inventory UI để hiển thị item đã được chuyển về
+                if (InventoryUI.Instance != null)
+                {
+                    InventoryUI.Instance.RefreshInventoryUI();
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[ItemInfoPanel] EquippingUI not found! Cannot unequip item.");
+            }
+
+            // Ẩn panel sau khi unequip
+            Hide();
+        }
+        else
+        {
+            Debug.LogWarning("[ItemInfoPanel] Item is not an EquipmentItem!");
+        }
+    }
+
+    /// <summary>
     /// Callback khi withdraw được confirm
     /// </summary>
     private void OnWithdrawConfirmed(int itemID, int quantity, string walletAddress)
@@ -185,9 +390,32 @@ public class ItemInfoPanel : MonoBehaviour
         // Xử lý withdraw logic ở đây (sẽ tích hợp blockchain sau)
         Debug.Log($"[ItemInfoPanel] Withdrawing {quantity}x item {itemID} to wallet: {walletAddress}");
         
-        // Xóa item khỏi inventory
-        if (InventoryManager.Instance != null&& WithdrawManager.Instance!=null)
+        if (InventoryManager.Instance == null || WithdrawManager.Instance == null)
         {
+            Debug.LogError("[ItemInfoPanel] InventoryManager or WithdrawManager is null!");
+            return;
+        }
+
+        // Lấy ItemData để kiểm tra loại item
+        ItemData itemData = ItemDatabase.Instance?.GetItemByID(itemID);
+        if (itemData == null)
+        {
+            Debug.LogError($"[ItemInfoPanel] Không tìm thấy ItemData với ID: {itemID}");
+            return;
+        }
+
+        // Xử lý riêng cho CoinItem
+        if (itemData is CoinItem coinItem)
+        {
+            // Với coin, withdraw với quantity cụ thể
+            WithdrawManager.Instance.WithdrawCoin(coinItem, quantity);
+            // Xóa coin khỏi inventory sau khi withdraw thành công (sẽ xóa sau khi mint thành công trên blockchain)
+            // Tạm thời xóa ngay để test
+            InventoryManager.Instance.RemoveItem(itemID, quantity);
+        }
+        else
+        {
+            // Với NFT items, withdraw như bình thường
             WithdrawManager.Instance.WithdrawItem(itemID);
             InventoryManager.Instance.RemoveItem(itemID, quantity);
         }

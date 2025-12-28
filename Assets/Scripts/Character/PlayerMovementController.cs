@@ -67,6 +67,15 @@ public class PlayerMovementController : MovementControllerBase
             return;
         }
         
+        // Check if inventory is open - chặn di chuyển khi inventory mở
+        if (InventoryUI.IsInventoryOpenStatic())
+        {
+            desiredVelocity = Vector2.zero;
+            CancelAutoFollow();
+            anim.SetAnimation(anim.GetCurrentDirection(), State.Idle);
+            return;
+        }
+        
         if (!GameManager.Instance.CanPlayerMove)
         {
             desiredVelocity = Vector2.zero;
@@ -128,55 +137,60 @@ public class PlayerMovementController : MovementControllerBase
             }
             return;
         }
-        var mouse = Mouse.current;
-        var touchScreen=Touchscreen.current;
-
-        if (mouse != null && mouse.leftButton.wasPressedThisFrame ||
-                    touchScreen != null && touchScreen.primaryTouch.press.wasPressedThisFrame)
+        
+        // Chặn click/touch input khi inventory mở
+        if (!InventoryUI.IsInventoryOpenStatic())
         {
-            Camera cam=Camera.main;
-            Vector2 screenPos=Vector2.zero;
-            if (touchScreen == null)
-            {
-                screenPos = Mouse.current.position.ReadValue();
-            }
-            else
-            {
-                screenPos= touchScreen.position.ReadValue();
-            }
-            Vector3 screenToWorld = cam.ScreenToWorldPoint(screenPos);
-            Vector2 worldPos = new Vector2(screenToWorld.x, screenToWorld.y);
-            RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
+            var mouse = Mouse.current;
+            var touchScreen=Touchscreen.current;
 
-            if (hit.collider != null)
+            if (mouse != null && mouse.leftButton.wasPressedThisFrame ||
+                        touchScreen != null && touchScreen.primaryTouch.press.wasPressedThisFrame)
             {
-                if (hit.collider.CompareTag("Enemy"))
+                Camera cam=Camera.main;
+                Vector2 screenPos=Vector2.zero;
+                if (touchScreen == null)
                 {
-                    // Click để chọn target và tự động di chuyển đến
-                    SetTargetAndMove(hit.transform);
+                    screenPos = Mouse.current.position.ReadValue();
                 }
-                else if (hit.collider.CompareTag("NPC"))
+                else
                 {
-                    var npc = hit.collider.GetComponent<NPCDialogueController>();
-                    if (npc == null) return;
-                    CancelAutoFollow();
-                    if (npcTalkCoroutine != null)
+                    screenPos= touchScreen.position.ReadValue();
+                }
+                Vector3 screenToWorld = cam.ScreenToWorldPoint(screenPos);
+                Vector2 worldPos = new Vector2(screenToWorld.x, screenToWorld.y);
+                RaycastHit2D hit = Physics2D.Raycast(worldPos, Vector2.zero);
+
+                if (hit.collider != null)
+                {
+                    if (hit.collider.CompareTag("Enemy"))
                     {
-                        StopCoroutine(npcTalkCoroutine);
-                        npcTalkCoroutine = null;
+                        // Click để chọn target và tự động di chuyển đến
+                        SetTargetAndMove(hit.transform);
                     }
+                    else if (hit.collider.CompareTag("NPC"))
+                    {
+                        var npc = hit.collider.GetComponent<NPCDialogueController>();
+                        if (npc == null) return;
+                        CancelAutoFollow();
+                        if (npcTalkCoroutine != null)
+                        {
+                            StopCoroutine(npcTalkCoroutine);
+                            npcTalkCoroutine = null;
+                        }
 
-                    Vector3 dirToNpc = (npc.transform.position - transform.position).normalized;
-                    Direction dir;
-                    if (Mathf.Abs(dirToNpc.x) > Mathf.Abs(dirToNpc.y))
-                        dir = dirToNpc.x > 0 ? Direction.Right : Direction.Left;
-                    else
-                        dir = dirToNpc.y > 0 ? Direction.Up : Direction.Down;
+                        Vector3 dirToNpc = (npc.transform.position - transform.position).normalized;
+                        Direction dir;
+                        if (Mathf.Abs(dirToNpc.x) > Mathf.Abs(dirToNpc.y))
+                            dir = dirToNpc.x > 0 ? Direction.Right : Direction.Left;
+                        else
+                            dir = dirToNpc.y > 0 ? Direction.Up : Direction.Down;
 
-                    anim.SetAnimation(dir, State.Walk);
-                    npcTalkCoroutine = StartCoroutine(MoveToNPCAndTalk(npc));
+                        anim.SetAnimation(dir, State.Walk);
+                        npcTalkCoroutine = StartCoroutine(MoveToNPCAndTalk(npc));
+                    }
+                    return;
                 }
-                return;
             }
         }
 

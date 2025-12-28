@@ -11,7 +11,9 @@ public class WithdrawManager : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private string defaultContractAddress = ""; // Địa chỉ contract mặc định (fallback nếu ItemData không có)
+    [SerializeField] private string gameTokenContractAddress = ""; // Địa chỉ contract GameToken (SpiritShard/GTK)
     [SerializeField] private string withdrawWebPath = "WithdrawWeb/index.html"; // Đường dẫn tới file HTML
+    [SerializeField] private string withdrawCoinWebPath = "WithdrawWeb/withdraw-coin.html"; // Đường dẫn tới file withdraw coin HTML
     [SerializeField] private string linkWalletWebPath = "WithdrawWeb/link-wallet.html"; // Đường dẫn tới file link wallet HTML
     [SerializeField] private bool useLocalhost = true; // Sử dụng localhost:8000 thay vì file:// (khuyến nghị)
     [SerializeField] private int localhostPort = 8000; // Port cho localhost server
@@ -109,6 +111,13 @@ public class WithdrawManager : MonoBehaviour
         if (!itemData.withdrawable)
         {
             Debug.LogWarning($"[WithdrawManager] Item '{itemData.itemName}' (ID: {itemData.itemID}) không thể withdraw!");
+            return;
+        }
+
+        // Xử lý riêng cho CoinItem (currency)
+        if (itemData is CoinItem coinItem)
+        {
+            WithdrawCoin(coinItem);
             return;
         }
 
@@ -309,12 +318,156 @@ public class WithdrawManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Withdraw coin để mint game token
+    /// </summary>
+    /// <param name="coinItem">CoinItem cần withdraw</param>
+    /// <param name="quantity">Số lượng coin muốn withdraw (nếu <= 0 thì lấy tất cả từ inventory)</param>
+    public void WithdrawCoin(CoinItem coinItem, int quantity = 0)
+    {
+        if (coinItem == null)
+        {
+            Debug.LogError("[WithdrawManager] CoinItem is null!");
+            return;
+        }
+
+        // Kiểm tra contract address
+        if (string.IsNullOrEmpty(gameTokenContractAddress))
+        {
+            Debug.LogError("[WithdrawManager] GameToken Contract Address chưa được set!");
+            return;
+        }
+
+        // Lấy số lượng coin từ inventory nếu quantity không được chỉ định
+        int coinQuantity = quantity > 0 ? quantity : (InventoryManager.Instance?.GetItemQuantity(coinItem.itemID) ?? 0);
+        if (coinQuantity <= 0)
+        {
+            Debug.LogWarning($"[WithdrawManager] Không có coin để withdraw! (ItemID: {coinItem.itemID})");
+            return;
+        }
+
+        // Tính tổng coin value (coinQuantity * coinValue)
+        int totalCoinValue = coinQuantity * coinItem.coinValue;
+        
+        Debug.Log($"[WithdrawManager] Withdraw coin: {coinQuantity}x {coinItem.itemName} (coinValue: {coinItem.coinValue}, Total value: {totalCoinValue})");
+        Debug.Log($"[WithdrawManager] Sẽ mint {totalCoinValue} GTK tokens");
+
+        // Mở trang withdraw coin
+        OpenWithdrawCoinPage(totalCoinValue, gameTokenContractAddress);
+    }
+
+    /// <summary>
+    /// Mở trang withdraw coin trong trình duyệt
+    /// </summary>
+    /// <param name="coinAmount">Tổng số coin value (sẽ mint số lượng token tương ứng)</param>
+    /// <param name="contractAddress">Contract address của GameToken</param>
+    public void OpenWithdrawCoinPage(int coinAmount, string contractAddress = "")
+    {
+        // Lấy đường dẫn tuyệt đối tới file HTML
+        string htmlPath = GetWithdrawCoinHTMLPath();
+        
+        if (string.IsNullOrEmpty(htmlPath))
+        {
+            Debug.LogError("[WithdrawManager] Không tìm thấy file withdraw-coin.html!");
+            return;
+        }
+
+        // Lấy contract address
+        string contractAddr = contractAddress;
+        if (string.IsNullOrEmpty(contractAddr))
+        {
+            contractAddr = gameTokenContractAddress;
+        }
+
+        if (string.IsNullOrEmpty(contractAddr))
+        {
+            Debug.LogError("[WithdrawManager] GameToken Contract Address chưa được set!");
+            return;
+        }
+
+        // Tạo URL - ưu tiên localhost nếu được bật
+        string url;
+        if (useLocalhost)
+        {
+            url = $"http://localhost:{localhostPort}/withdraw-coin.html";
+            Debug.Log($"[WithdrawManager] Sử dụng localhost. Đảm bảo HTTP server đang chạy tại port {localhostPort}!");
+        }
+        else
+        {
+            string normalizedPath = htmlPath.Replace('\\', '/');
+            url = $"file:///{normalizedPath}";
+            Debug.LogWarning($"[WithdrawManager] Đang dùng file:// - MetaMask có thể không hoạt động trên Chrome!");
+        }
+
+        // Thêm parameters
+        url += $"?contract={contractAddr}&amount={coinAmount}";
+
+        Debug.Log($"[WithdrawManager] Mở trình duyệt để withdraw coin: {url}");
+
+        // Mở trình duyệt
+        Application.OpenURL(url);
+    }
+
+    /// <summary>
+    /// Lấy đường dẫn tuyệt đối tới file withdraw-coin.html
+    /// </summary>
+    private string GetWithdrawCoinHTMLPath()
+    {
+        // Tìm file trong Assets folder
+        string[] possiblePaths = {
+            Path.Combine(Application.dataPath, withdrawCoinWebPath),
+            Path.Combine(Application.dataPath, "..", withdrawCoinWebPath),
+            Path.Combine(Directory.GetCurrentDirectory(), withdrawCoinWebPath),
+            Path.Combine(Application.streamingAssetsPath, "..", "..", withdrawCoinWebPath)
+        };
+
+        foreach (string path in possiblePaths)
+        {
+            if (File.Exists(path))
+            {
+                Debug.Log($"[WithdrawManager] Tìm thấy withdraw-coin.html tại: {path}");
+                return path;
+            }
+        }
+
+        Debug.LogWarning($"[WithdrawManager] Không tìm thấy file withdraw-coin.html tại các đường dẫn:");
+        foreach (string path in possiblePaths)
+        {
+            Debug.LogWarning($"  - {path}");
+        }
+
+        return null;
+    }
+
+    /// <summary>
     /// Set default contract address (có thể gọi từ code hoặc Inspector)
     /// </summary>
     public void SetDefaultContractAddress(string address)
     {
         defaultContractAddress = address;
         Debug.Log($"[WithdrawManager] Đã set default contract address: {address}");
+    }
+
+    /// <summary>
+    /// Set game token contract address (có thể gọi từ code hoặc Inspector)
+    /// </summary>
+    public void SetGameTokenContractAddress(string address)
+    {
+        gameTokenContractAddress = address;
+        Debug.Log($"[WithdrawManager] Đã set game token contract address: {address}");
+        
+        // Đồng bộ với GameTokenBalanceManager nếu có
+        if (GameTokenBalanceManager.Instance != null)
+        {
+            GameTokenBalanceManager.Instance.SetGameTokenContractAddress(address);
+        }
+    }
+
+    /// <summary>
+    /// Lấy game token contract address (public getter)
+    /// </summary>
+    public string GetGameTokenContractAddress()
+    {
+        return gameTokenContractAddress;
     }
 
     /// <summary>

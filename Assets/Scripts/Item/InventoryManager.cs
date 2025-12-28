@@ -24,8 +24,11 @@ public class InventoryManager : MonoBehaviour
     public static InventoryManager Instance { get; private set; }
 
     private Dictionary<int, InventoryItem> inventory = new Dictionary<int, InventoryItem>();
+    private Dictionary<EquipmentSlot, int> equippedItems = new Dictionary<EquipmentSlot, int>(); // EquipmentSlot -> variantId
+    private Dictionary<EquipmentSlot, bool> equippedItemsFromWallet = new Dictionary<EquipmentSlot, bool>(); // EquipmentSlot -> isFromWallet
     private const string INVENTORY_KEY = "PlayerInventory";
     private const string WALLET_ADDRESS_KEY = "WalletAddress";
+    private const string EQUIPPED_ITEMS_KEY = "EquippedItems";
 
     // Event để UI có thể subscribe
     public System.Action OnInventoryLoaded;
@@ -49,10 +52,10 @@ public class InventoryManager : MonoBehaviour
     /// </summary>
     public void LoadInventoryFromPlayFab()
     {
-        // Load cả inventory và wallet address
+        // Load cả inventory, wallet address và equipped items
         var request = new GetUserDataRequest
         {
-            Keys = new List<string> { INVENTORY_KEY, WALLET_ADDRESS_KEY }
+            Keys = new List<string> { INVENTORY_KEY, WALLET_ADDRESS_KEY, EQUIPPED_ITEMS_KEY }
         };
 
         PlayFabClientAPI.GetUserData(
@@ -87,6 +90,19 @@ public class InventoryManager : MonoBehaviour
         {
             cachedWalletAddress = null;
             Debug.Log("[InventoryManager] No wallet address found in PlayFab");
+        }
+
+        // Load equipped items
+        if (result.Data != null && result.Data.ContainsKey(EQUIPPED_ITEMS_KEY))
+        {
+            string equippedItemsJson = result.Data[EQUIPPED_ITEMS_KEY].Value;
+            LoadEquippedItemsFromJson(equippedItemsJson);
+            Debug.Log("[InventoryManager] Equipped items loaded from PlayFab");
+        }
+        else
+        {
+            equippedItems.Clear();
+            Debug.Log("[InventoryManager] No equipped items found in PlayFab");
         }
 
         // Gọi event để UI refresh
@@ -385,10 +401,177 @@ public class InventoryManager : MonoBehaviour
         cachedWalletAddress = null;
     }
 
+    /// <summary>
+    /// Lưu equipped item (khi player use equipment)
+    /// </summary>
+    public void EquipItem(EquipmentSlot slot, int variantId, bool isFromWallet = false)
+    {
+        equippedItems[slot] = variantId;
+        equippedItemsFromWallet[slot] = isFromWallet;
+        SaveEquippedItemsToPlayFab();
+        Debug.Log($"[InventoryManager] Equipped item: Slot={slot}, Variant={variantId}, IsFromWallet={isFromWallet}");
+    }
+
+    /// <summary>
+    /// Gỡ equipped item
+    /// </summary>
+    public void UnequipItem(EquipmentSlot slot)
+    {
+        if (equippedItems.ContainsKey(slot))
+        {
+            equippedItems.Remove(slot);
+            if (equippedItemsFromWallet.ContainsKey(slot))
+            {
+                equippedItemsFromWallet.Remove(slot);
+            }
+            SaveEquippedItemsToPlayFab();
+            Debug.Log($"[InventoryManager] Unequipped item: Slot={slot}");
+        }
+    }
+
+    /// <summary>
+    /// Lấy variant ID của equipped item trong slot
+    /// </summary>
+    public int GetEquippedVariant(EquipmentSlot slot)
+    {
+        if (equippedItems.TryGetValue(slot, out int variantId))
+        {
+            return variantId;
+        }
+        return -1; // Không có equipment trong slot này
+    }
+
+    /// <summary>
+    /// Lấy tất cả equipped items
+    /// </summary>
+    public Dictionary<EquipmentSlot, int> GetAllEquippedItems()
+    {
+        return new Dictionary<EquipmentSlot, int>(equippedItems);
+    }
+
+    /// <summary>
+    /// Kiểm tra item đang equip có từ wallet không
+    /// </summary>
+    public bool IsEquippedItemFromWallet(EquipmentSlot slot)
+    {
+        if (equippedItemsFromWallet.TryGetValue(slot, out bool isFromWallet))
+        {
+            return isFromWallet;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Lấy tất cả equipped items với flag isFromWallet
+    /// </summary>
+    public Dictionary<EquipmentSlot, bool> GetAllEquippedItemsFromWallet()
+    {
+        return new Dictionary<EquipmentSlot, bool>(equippedItemsFromWallet);
+    }
+
+    /// <summary>
+    /// Load equipped items từ JSON
+    /// </summary>
+    private void LoadEquippedItemsFromJson(string json)
+    {
+        try
+        {
+            EquippedItemsData data = JsonUtility.FromJson<EquippedItemsData>(json);
+            equippedItems.Clear();
+
+            if (data.items != null)
+            {
+                foreach (var item in data.items)
+                {
+                    if (System.Enum.TryParse<EquipmentSlot>(item.slot, out EquipmentSlot slot))
+                    {
+                        equippedItems[slot] = item.variantId;
+                        // Load flag isFromWallet (mặc định false nếu không có trong data cũ)
+                        equippedItemsFromWallet[slot] = item.isFromWallet;
+                    }
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[InventoryManager] Failed to parse equipped items JSON: {e.Message}");
+            equippedItems.Clear();
+        }
+    }
+
+    /// <summary>
+    /// Lưu equipped items lên PlayFab
+    /// </summary>
+    private void SaveEquippedItemsToPlayFab()
+    {
+        if (PlayerDataManager.Instance == null || string.IsNullOrEmpty(PlayerDataManager.Instance.Data?.userId))
+        {
+            Debug.LogWarning("[InventoryManager] Cannot save equipped items to PlayFab: Player not logged in");
+            return;
+        }
+
+        // Convert equipped items thành JSON
+        EquippedItemsData data = new EquippedItemsData
+        {
+            items = new List<EquippedItemData>()
+        };
+
+        foreach (var kvp in equippedItems)
+        {
+            bool isFromWallet = equippedItemsFromWallet.ContainsKey(kvp.Key) && equippedItemsFromWallet[kvp.Key];
+            data.items.Add(new EquippedItemData
+            {
+                slot = kvp.Key.ToString(),
+                variantId = kvp.Value,
+                isFromWallet = isFromWallet
+            });
+        }
+
+        string equippedItemsJson = JsonUtility.ToJson(data);
+
+        var request = new UpdateUserDataRequest
+        {
+            Data = new Dictionary<string, string>
+            {
+                { EQUIPPED_ITEMS_KEY, equippedItemsJson }
+            }
+        };
+
+        PlayFabClientAPI.UpdateUserData(
+            request,
+            OnEquippedItemsSaved,
+            OnEquippedItemsSaveFailed
+        );
+    }
+
+    private void OnEquippedItemsSaved(UpdateUserDataResult result)
+    {
+        Debug.Log("[InventoryManager] Equipped items saved to PlayFab successfully");
+    }
+
+    private void OnEquippedItemsSaveFailed(PlayFabError error)
+    {
+        Debug.LogError($"[InventoryManager] Failed to save equipped items to PlayFab: {error.ErrorMessage}");
+    }
+
     [System.Serializable]
     public class InventoryData
     {
         public List<InventoryItem> items;
+    }
+
+    [System.Serializable]
+    public class EquippedItemsData
+    {
+        public List<EquippedItemData> items;
+    }
+
+    [System.Serializable]
+    public class EquippedItemData
+    {
+        public string slot; // EquipmentSlot as string
+        public int variantId;
+        public bool isFromWallet; // Flag để track item có từ wallet không
     }
 }
 

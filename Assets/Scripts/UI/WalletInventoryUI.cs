@@ -11,6 +11,9 @@ public class WalletInventoryUI : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private GameObject walletInventoryPanel; // Panel chứa toàn bộ wallet inventory UI
+    
+    // Public property để InventoryUI có thể truy cập
+    public GameObject WalletInventoryPanel => walletInventoryPanel;
     [SerializeField] private ScrollRect scrollView; // ScrollView để hiển thị items
     [SerializeField] private Transform contentContainer; // Container trong ScrollView để chứa item slots
     [SerializeField] private GameObject walletItemSlotPrefab; // Prefab cho mỗi wallet item slot
@@ -76,7 +79,7 @@ public class WalletInventoryUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Hiển thị wallet inventory UI (được gọi từ InventoryUI khi mở inventory)
+    /// Hiển thị wallet inventory UI (được gọi từ InventoryUI khi chuyển sang tab Wallet)
     /// </summary>
     public void ShowWalletInventory()
     {
@@ -87,7 +90,7 @@ public class WalletInventoryUI : MonoBehaviour
             walletInventoryPanel.SetActive(true);
         }
 
-        // Tự động fetch wallet inventory lần đầu khi mở
+        // Tự động fetch wallet inventory lần đầu khi chuyển sang tab này
         if (!hasFetchedOnce)
         {
             AutoFetchWalletInventory();

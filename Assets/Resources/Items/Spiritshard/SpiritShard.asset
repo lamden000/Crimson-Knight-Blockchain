@@ -19,6 +19,6 @@ MonoBehaviour:
   category: 0
   rarity: 3
   withdrawable: 1
-  nftContractAddress: 0x540aB8468a80D9666C7b8DD26AcBC61FE7262337
+  nftContractAddress: 0xe2ed4800e710605fa8225BDb7f4e8F6e13F8bD32
   metadataCID: 
   coinValue: 5

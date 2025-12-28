@@ -206,6 +206,13 @@ public class WalletInventoryManager : MonoBehaviour
 
         Debug.Log($"[WalletInventoryManager] Đã load {walletNFTs.Count} NFT từ wallet");
         OnWalletInventoryRefreshed?.Invoke();
+        
+        // Kiểm tra và remove equipped items không còn trong wallet
+        EquippingUI equippingUI = FindAnyObjectByType<EquippingUI>();
+        if (equippingUI != null)
+        {
+            equippingUI.CheckAndRemoveWalletItems();
+        }
     }
 
     /// <summary>

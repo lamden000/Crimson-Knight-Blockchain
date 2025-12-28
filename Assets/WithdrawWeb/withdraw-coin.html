@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw Coin - Mint Game Token</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-box.info {
+            border-left-color: #3498db;
+            background: #eef;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .wallet-info {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        .coin-info {
+            background: #fff9e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            border-color: #d0d0d0;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .network-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Withdraw Coin</h1>
+        <p class="subtitle">Mint Game Token (GTK) từ coin trong game</p>
+
+        <div id="statusBox" class="status-box info">
+            <div class="status-text">Đang chờ kết nối MetaMask...</div>
+        </div>
+
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <strong>Địa chỉ ví:</strong>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="network-info" id="networkInfo"></div>
+        </div>
+
+        <div id="coinInfo" class="coin-info" style="display: none;">
+            <strong>Thông tin Withdraw:</strong>
+            <div style="margin-top: 10px;">
+                <div>Số coin: <strong id="coinAmount">0</strong></div>
+                <div>Số token sẽ nhận: <strong id="tokenAmount">0</strong> GTK</div>
+                <div style="font-size: 12px; color: #666; margin-top: 5px;">
+                    Tỷ lệ: 1 coin = 1 GTK token
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="contractAddress">Contract Address (GameToken):</label>
+            <input type="text" id="contractAddress" placeholder="0x..." value="" readonly>
+            <small style="color: #666; font-size: 12px; display: block; margin-top: 5px;">Tự động từ game - không thể chỉnh sửa</small>
+        </div>
+
+        <button id="connectBtn" onclick="connectWallet()">🔗 Kết nối MetaMask</button>
+        <button id="switchNetworkBtn" onclick="switchToAmoy()" disabled class="button-secondary" style="display: none; background: #6c757d;">🔄 Chuyển sang Polygon Amoy</button>
+        <button id="mintBtn" onclick="mintTokens()" disabled>💰 Mint Game Token</button>
+        <button id="checkBalanceBtn" onclick="checkTokenBalance()" disabled class="button-secondary" style="background: #6c757d;">📊 Kiểm tra số dư GTK</button>
+    </div>
+
+    <script>
+        let web3;
+        let userAccount;
+        let contract;
+        let contractAddress = '';
+        let coinAmount = 0;
+
+        // ABI của contract GameToken (SpiritShard)
+        const GAME_TOKEN_ABI = [
+            {
+                "inputs": [],
+                "name": "mintForYourself",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [{"internalType": "uint256", "name": "amount", "type": "uint256"}],
+                "name": "mintAmount",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [{"internalType": "address", "name": "account", "type": "address"}],
+                "name": "balanceOf",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "MINT_AMOUNT",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "symbol",
+                "outputs": [{"internalType": "string", "name": "", "type": "string"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // Lấy parameters từ URL
+        function getURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            
+            const address = params.get('contract');
+            if (address) {
+                document.getElementById('contractAddress').value = address;
+                contractAddress = address;
+            } else {
+                showStatus('⚠️ Contract Address chưa được set. Vui lòng mở lại từ game.', 'error');
+            }
+            
+            const amount = params.get('amount');
+            if (amount) {
+                coinAmount = parseInt(amount) || 0;
+                updateCoinInfo();
+            }
+        }
+
+        function updateCoinInfo() {
+            if (coinAmount > 0) {
+                document.getElementById('coinInfo').style.display = 'block';
+                document.getElementById('coinAmount').textContent = coinAmount;
+                document.getElementById('tokenAmount').textContent = coinAmount; // 1 coin = 1 token
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.querySelector('.status-text').textContent = message;
+        }
+
+        // Kiểm tra protocol
+        function checkProtocolOnLoad() {
+            if (window.location.protocol === 'file:') {
+                showStatus('⚠️ Đang chạy từ file:// - Vui lòng chạy qua HTTP server!', 'error');
+                return false;
+            }
+            return true;
+        }
+
+        // Kết nối MetaMask
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask chưa được cài đặt! Vui lòng cài đặt MetaMask extension.', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
+
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Revoke permissions trước để force popup
+                try {
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (e) {
+                            console.log('Cannot revoke permissions');
+                        }
+                    }
+                } catch (e) {
+                    console.log('wallet_getPermissions not supported');
+                }
+
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                });
+                
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+
+                userAccount = accounts[0];
+
+                web3 = new Web3(window.ethereum);
+
+                document.getElementById('walletAddress').textContent = userAccount;
+                document.getElementById('walletInfo').style.display = 'block';
+
+                const chainId = await web3.eth.getChainId();
+                const networkNames = {
+                    1: 'Ethereum Mainnet',
+                    5: 'Goerli Testnet',
+                    11155111: 'Sepolia Testnet',
+                    80001: 'Mumbai Testnet',
+                    80002: 'Polygon Amoy Testnet',
+                    137: 'Polygon Mainnet',
+                    1337: 'Localhost',
+                    31337: 'Hardhat'
+                };
+                const networkName = networkNames[chainId] || `Chain ID: ${chainId}`;
+                document.getElementById('networkInfo').textContent = `Network: ${networkName}`;
+
+                await ensureAmoyNetwork();
+
+                if (!contractAddress) {
+                    showStatus('⚠️ Contract Address chưa được set từ game!', 'error');
+                    return;
+                }
+
+                if (!web3.utils.isAddress(contractAddress)) {
+                    showStatus('❌ Contract Address không hợp lệ!', 'error');
+                    return;
+                }
+
+                contractAddress = web3.utils.toChecksumAddress(contractAddress);
+                document.getElementById('contractAddress').value = contractAddress;
+
+                contract = new web3.eth.Contract(GAME_TOKEN_ABI, contractAddress);
+
+                try {
+                    await contract.methods.symbol().call();
+                    console.log('Contract connection verified');
+                } catch (testError) {
+                    showStatus('⚠️ Không thể kết nối với contract. Kiểm tra lại address và network.', 'error');
+                    return;
+                }
+
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
+                document.getElementById('checkBalanceBtn').disabled = false;
+
+                const currentChainId = await web3.eth.getChainId();
+                if (currentChainId != 80002) {
+                    document.getElementById('switchNetworkBtn').style.display = 'block';
+                    document.getElementById('switchNetworkBtn').disabled = false;
+                    document.getElementById('mintBtn').disabled = true;
+                    showStatus(`⚠️ Đang ở network khác (Chain ID: ${currentChainId}). Vui lòng chuyển sang Polygon Amoy (80002)`, 'error');
+                } else {
+                    document.getElementById('switchNetworkBtn').style.display = 'none';
+                    document.getElementById('mintBtn').disabled = false;
+                    showStatus(`✅ Đã kết nối! Địa chỉ: ${userAccount.substring(0, 6)}...${userAccount.substring(38)}`, 'success');
+                }
+
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length === 0) {
+                        showStatus('⚠️ MetaMask đã bị ngắt kết nối', 'error');
+                        location.reload();
+                    } else {
+                        userAccount = accounts[0];
+                        document.getElementById('walletAddress').textContent = userAccount;
+                        showStatus('✅ Đã chuyển đổi tài khoản', 'success');
+                    }
+                });
+
+                window.ethereum.on('chainChanged', () => {
+                    location.reload();
+                });
+
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                if (error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
+                } else {
+                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Chuyển sang Polygon Amoy
+        async function switchToAmoy() {
+            await ensureAmoyNetwork();
+        }
+
+        // Đảm bảo đang ở Polygon Amoy
+        async function ensureAmoyNetwork() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    return false;
+                }
+
+                const chainId = await web3.eth.getChainId();
+                const amoyChainId = '0x13882';
+
+                if (chainId == 80002) {
+                    return true;
+                }
+
+                showStatus('⏳ Đang chuyển sang Polygon Amoy Testnet...', 'info');
+
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: amoyChainId }],
+                    });
+                    showStatus('✅ Đã chuyển sang Polygon Amoy Testnet', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                    return true;
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: amoyChainId,
+                                    chainName: 'Polygon Amoy Testnet',
+                                    nativeCurrency: {
+                                        name: 'POL',
+                                        symbol: 'POL',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: ['https://rpc-amoy.polygon.technology'],
+                                    blockExplorerUrls: ['https://www.oklink.com/amoy']
+                                }],
+                            });
+                            showStatus('✅ Đã thêm và chuyển sang Polygon Amoy Testnet', 'success');
+                            setTimeout(() => location.reload(), 1500);
+                            return true;
+                        } catch (addError) {
+                            showStatus('❌ Không thể thêm Polygon Amoy network.', 'error');
+                            return false;
+                        }
+                    } else if (switchError.code === 4001) {
+                        showStatus('❌ Bạn đã từ chối chuyển network', 'error');
+                        return false;
+                    } else {
+                        showStatus('❌ Không thể chuyển network.', 'error');
+                        return false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error ensuring Amoy network:', error);
+                return false;
+            }
+        }
+
+        // Mint tokens (gọi mintForYourself nhiều lần)
+        async function mintTokens() {
+            try {
+                if (!contract || !userAccount) {
+                    showStatus('❌ Vui lòng kết nối MetaMask trước!', 'error');
+                    return;
+                }
+
+                const currentChainId = await web3.eth.getChainId();
+                if (currentChainId != 80002) {
+                    showStatus('⚠️ Vui lòng chuyển sang Polygon Amoy Testnet trước!', 'error');
+                    return;
+                }
+
+                if (coinAmount <= 0) {
+                    showStatus('❌ Số coin không hợp lệ!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang ước tính gas...', 'info');
+                document.getElementById('mintBtn').disabled = true;
+                document.getElementById('mintBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Convert coin amount to wei (1 coin = 1 token = 1 * 10^18 wei)
+                const amountInWei = web3.utils.toWei(coinAmount.toString(), 'ether');
+
+                // Estimate gas cho mintAmount
+                let gasEstimate;
+                try {
+                    gasEstimate = await contract.methods.mintAmount(amountInWei).estimateGas({
+                        from: userAccount
+                    });
+                    gasEstimate = Math.floor(gasEstimate * 1.2);
+                } catch (estimateError) {
+                    gasEstimate = 200000;
+                }
+
+                // Kiểm tra balance
+                try {
+                    const balance = await web3.eth.getBalance(userAccount);
+                    const gasPrice = await web3.eth.getGasPrice();
+                    const gasCost = web3.utils.toBN(gasEstimate).mul(web3.utils.toBN(gasPrice));
+                    if (web3.utils.toBN(balance).lt(gasCost)) {
+                        showStatus('❌ Không đủ POL để trả gas fee!', 'error');
+                        document.getElementById('mintBtn').innerHTML = '💰 Mint Game Token';
+                        document.getElementById('mintBtn').disabled = false;
+                        return;
+                    }
+                } catch (balanceError) {
+                    console.warn('Could not check balance');
+                }
+
+                // Lấy gas price
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    const baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    const maxPriorityFeePerGas = web3.utils.toWei('2', 'gwei');
+                    const maxFeePerGas = web3.utils.toBN(baseFee).mul(web3.utils.toBN(2)).add(web3.utils.toBN(maxPriorityFeePerGas)).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                } catch (eip1559Error) {
+                    try {
+                        txParams.gasPrice = await web3.eth.getGasPrice();
+                    } catch (gasPriceError) {
+                        txParams.gasPrice = web3.utils.toWei('30', 'gwei');
+                    }
+                }
+
+                showStatus(`⏳ Đang mint ${coinAmount} GTK token...`, 'info');
+
+                // Mint tokens với số lượng tùy chỉnh (1 lần gọi)
+                try {
+                    const tx = await contract.methods.mintAmount(amountInWei).send(txParams);
+                    showStatus(`✅ Đã mint thành công ${coinAmount} GTK token! Transaction: ${tx.transactionHash}`, 'success');
+                    setTimeout(checkTokenBalance, 2000);
+                } catch (mintError) {
+                    console.error('Error minting tokens:', mintError);
+                    if (mintError.message && mintError.message.includes('user rejected')) {
+                        showStatus('❌ Bạn đã từ chối giao dịch mint token', 'error');
+                    } else {
+                        showStatus(`❌ Lỗi mint token: ${mintError.message}`, 'error');
+                    }
+                }
+
+                document.getElementById('mintBtn').innerHTML = '💰 Mint Game Token';
+                document.getElementById('mintBtn').disabled = false;
+
+            } catch (error) {
+                console.error('Error minting tokens:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                document.getElementById('mintBtn').innerHTML = '💰 Mint Game Token';
+                document.getElementById('mintBtn').disabled = false;
+            }
+        }
+
+        // Kiểm tra số dư token
+        async function checkTokenBalance() {
+            try {
+                if (!contract || !userAccount) {
+                    showStatus('❌ Vui lòng kết nối MetaMask trước!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang kiểm tra...', 'info');
+
+                const balance = await contract.methods.balanceOf(userAccount).call();
+                const balanceInGTK = web3.utils.fromWei(balance, 'ether');
+
+                showStatus(`📊 Số dư GTK của bạn: ${balanceInGTK} GTK`, 'success');
+
+            } catch (error) {
+                console.error('Error checking balance:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            getURLParams();
+            checkProtocolOnLoad();
+        });
+    </script>
+</body>
+</html>
+

@@ -99,6 +99,9 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
 
         LoadSprites();
         ApplyAppearanceFromProperties();
+        
+        // Apply equipped items từ PlayFab (nếu có)
+        StartCoroutine(ApplyEquippedItemsFromPlayFab());
     }
 
     private void LateUpdate()
@@ -428,6 +431,84 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
                 partVariants[part] = variant;
                 LoadPart(part, variant);
             }
+        }
+    }
+
+    /// <summary>
+    /// Apply equipped items từ PlayFab (sau khi inventory đã load)
+    /// </summary>
+    private System.Collections.IEnumerator ApplyEquippedItemsFromPlayFab()
+    {
+        // Đợi InventoryManager load xong
+        while (InventoryManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        // Đợi inventory được load từ PlayFab
+        yield return new WaitForSeconds(0.5f); // Tạm thời đợi 0.5s, có thể cải thiện bằng event
+
+        // Lấy tất cả equipped items
+        var equippedItems = InventoryManager.Instance.GetAllEquippedItems();
+        
+        if (equippedItems == null || equippedItems.Count == 0)
+        {
+            Debug.Log("[PlayerAnimationController] No equipped items to apply");
+            yield break;
+        }
+
+        Debug.Log($"[PlayerAnimationController] Applying {equippedItems.Count} equipped items from PlayFab");
+
+        // Apply từng equipped item
+        foreach (var kvp in equippedItems)
+        {
+            EquipmentSlot slot = kvp.Key;
+            int variantId = kvp.Value;
+
+            // Map EquipmentSlot sang CharacterPart
+            CharacterPart characterPart = MapEquipmentSlotToCharacterPart(slot);
+            
+            if (characterPart != CharacterPart.Eyes) // Eyes là invalid marker
+            {
+                Debug.Log($"[PlayerAnimationController] Applying equipment: Slot={slot}, Variant={variantId}, Part={characterPart}");
+                SetPart(characterPart, variantId);
+            }
+            else
+            {
+                Debug.LogWarning($"[PlayerAnimationController] Cannot apply equipment slot {slot}: not supported for visual display");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Map EquipmentSlot sang CharacterPart (tương tự như trong EquipmentItem)
+    /// </summary>
+    private CharacterPart MapEquipmentSlotToCharacterPart(EquipmentSlot slot)
+    {
+        switch (slot)
+        {
+            case EquipmentSlot.Head:
+                return CharacterPart.Head;
+            case EquipmentSlot.Body:
+                return CharacterPart.Body;
+            case EquipmentSlot.Legs:
+                return CharacterPart.Legs;
+            case EquipmentSlot.Wing:
+                return CharacterPart.Wings;
+            case EquipmentSlot.Weapon:
+                // Weapon type phụ thuộc vào class của character
+                if (character != null)
+                {
+                    return character.GetWeaponType();
+                }
+                return CharacterPart.Sword; // Fallback
+            case EquipmentSlot.Hair:
+                return CharacterPart.Hair;
+            case EquipmentSlot.Feet:
+                // Feet không hiển thị trên nhân vật
+                return CharacterPart.Eyes; // Invalid marker
+            default:
+                return CharacterPart.Eyes; // Invalid marker
         }
     }
 
