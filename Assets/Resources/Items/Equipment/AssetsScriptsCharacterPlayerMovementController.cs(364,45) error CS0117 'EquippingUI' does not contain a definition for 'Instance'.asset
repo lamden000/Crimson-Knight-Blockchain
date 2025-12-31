@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab450b9f7404f474da56a0214e5d1ce9, type: 3}
+  m_Name: AssetsScriptsCharacterPlayerMovementController.cs(364,45) error CS0117
+    'EquippingUI' does not contain a definition for 'Instance'
+  m_EditorClassIdentifier: 
+  itemID: 0
+  itemName: 
+  description: 
+  icon: {fileID: 0}
+  category: 0
+  rarity: 0
+  withdrawable: 0
+  nftContractAddress: 
+  metadataCID: 
+  slot: 0
+  defense: 0
+  stylePoints: 0
+  variantId: 0
+  attackSkill: {fileID: 0}
+  attackSkillChance: 0
+  attackDamage: 0

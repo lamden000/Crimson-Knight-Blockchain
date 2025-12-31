@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Photon.Pun;
 
 public class SkillManager : MonoBehaviour
 {
@@ -10,6 +11,8 @@ public class SkillManager : MonoBehaviour
 
     [Header("Skill Prefab")]
     [SerializeField] private GameObject skillPrefab; // Prefab chứa SkillSpawnmer component
+    
+    public GameObject SkillPrefab => skillPrefab; // Public property để WeaponItem có thể access
 
     private Dictionary<int, float> skillCooldowns = new Dictionary<int, float>();
     private Dictionary<int, float> skillCooldownTimers = new Dictionary<int, float>();
@@ -103,19 +106,38 @@ public class SkillManager : MonoBehaviour
             return;
         }
 
-        // Tạo skill spawner
-        var obj = Instantiate(skillPrefab, casterPosition, Quaternion.identity);
-        var skillSpawner = obj.GetComponent<SkillSpawnmer>();
-
-        if (skillSpawner == null)
+        // Chỉ local player spawn skill (để sync cho các client khác)
+        if (PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
         {
-            Debug.LogError("[SkillManager] SkillPrefab không có SkillSpawnmer component!");
-            Destroy(obj);
-            return;
-        }
+            // Spawn qua PhotonNetwork
+            GameObject obj = PhotonNetwork.Instantiate("Prefabs/Skill", casterPosition, Quaternion.identity);
+            var skillSpawner = obj.GetComponent<SkillSpawnmer>();
 
-        // Init skill
-        skillSpawner.Init(skillData, casterPosition, mousePosition, target);
+            if (skillSpawner == null)
+            {
+                Debug.LogError("[SkillManager] SkillPrefab không có SkillSpawnmer component!");
+                PhotonNetwork.Destroy(obj);
+                return;
+            }
+
+            // Init skill (chỉ local player sẽ spawn, remote sẽ nhận qua RPC)
+            skillSpawner.Init(skillData, casterPosition, mousePosition, target);
+        }
+        else
+        {
+            // Single player mode: instantiate thường
+            var obj = Instantiate(skillPrefab, casterPosition, Quaternion.identity);
+            var skillSpawner = obj.GetComponent<SkillSpawnmer>();
+
+            if (skillSpawner == null)
+            {
+                Debug.LogError("[SkillManager] SkillPrefab không có SkillSpawnmer component!");
+                Destroy(obj);
+                return;
+            }
+
+            skillSpawner.Init(skillData, casterPosition, mousePosition, target);
+        }
     }
 
     public SkillSpawnData GetSkillData(int skillSlot)

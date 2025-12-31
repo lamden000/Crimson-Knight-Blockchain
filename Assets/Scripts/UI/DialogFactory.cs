@@ -10,6 +10,7 @@ public class DialogFactory : MonoBehaviour
     [SerializeField] private DialogOK dialogOKPrefab;
     [SerializeField] private DialogDropdown dialogDropdownPrefab;
     [SerializeField] private WithdrawDialog withdrawDialogPrefab;
+    [SerializeField] private SellItemDialog sellItemDialogPrefab;
 
     private void Awake()
     {
@@ -40,5 +41,15 @@ public class DialogFactory : MonoBehaviour
             return null;
         }
         return Instantiate(withdrawDialogPrefab, mainCanvas.transform, false);
+    }
+
+    public SellItemDialog CreateSellItemDialog()
+    {
+        if (sellItemDialogPrefab == null)
+        {
+            Debug.LogError("[DialogFactory] SellItemDialog prefab is not assigned!");
+            return null;
+        }
+        return Instantiate(sellItemDialogPrefab, mainCanvas.transform, false);
     }
 }

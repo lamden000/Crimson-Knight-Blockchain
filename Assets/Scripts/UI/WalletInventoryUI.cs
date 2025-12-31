@@ -342,12 +342,13 @@ public class WalletInventoryUI : MonoBehaviour
     /// <summary>
     /// Hiển thị thông tin item trong info panel (dùng chung với InventoryUI)
     /// </summary>
-    public void ShowItemInfo(ItemData itemData)
+    public void ShowItemInfo(ItemData itemData, WalletInventoryManager.WalletNFT walletNFT = null)
     {
         if (itemInfoPanel != null)
         {
             // Pass isFromWallet = true vì item từ wallet inventory (đã withdraw rồi)
-            itemInfoPanel.ShowItemInfo(itemData, isFromWallet: true);
+            // Pass walletNFT để có thể lấy tokenId cho việc bán
+            itemInfoPanel.ShowItemInfo(itemData, isFromWallet: true, isFromEquipping: false, walletNFT: walletNFT);
         }
         else
         {
@@ -507,7 +508,7 @@ public class WalletItemSlotUI : MonoBehaviour, UnityEngine.EventSystems.IPointer
         // Gọi WalletInventoryUI để hiển thị info panel
         if (walletInventoryUI != null && itemData != null)
         {
-            walletInventoryUI.ShowItemInfo(itemData);
+            walletInventoryUI.ShowItemInfo(itemData, nft);
         }
         else if (itemData != null)
         {
@@ -515,7 +516,7 @@ public class WalletItemSlotUI : MonoBehaviour, UnityEngine.EventSystems.IPointer
             WalletInventoryUI foundUI = FindAnyObjectByType<WalletInventoryUI>();
             if (foundUI != null)
             {
-                foundUI.ShowItemInfo(itemData);
+                foundUI.ShowItemInfo(itemData, nft);
             }
         }
     }

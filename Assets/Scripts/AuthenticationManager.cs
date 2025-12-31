@@ -178,7 +178,6 @@ public class AuthenticationManager : MonoBehaviour
     void OnLoginFailure(PlayFabError error)
     {
         DisplayStatus("Login failed: " + error.ErrorMessage, true);
-        Debug.LogError("Login FAIL:\n" + error.GenerateErrorReport());
     }
 
     private void DisplayStatus(string status,bool isError)

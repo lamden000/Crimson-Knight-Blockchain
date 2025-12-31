@@ -1,14 +1,16 @@
 ﻿using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using Photon.Pun;
 
-public class SkillSpawnmer : MonoBehaviour
+public class SkillSpawnmer : MonoBehaviourPun
 {
     public SkillSpawnData spawnData;
 
     private Vector3 casterPos;
     private Vector3 mousePos;
     private Transform target;
+    private int targetViewID = -1; // PhotonView ID của target
 
     public GameObject skillObjectPrefab;
     public float skyHeight = 200f;
@@ -26,7 +28,54 @@ public class SkillSpawnmer : MonoBehaviour
         mousePos = mousePosition;
         target = targetFollow;
 
+        // Lưu target ViewID để sync
+        if (target != null)
+        {
+            PhotonView targetPV = target.GetComponent<PhotonView>();
+            if (targetPV != null)
+            {
+                targetViewID = targetPV.ViewID;
+            }
+        }
+
         transform.position = casterPosition;
+
+        // Chỉ local player spawn, sau đó sync cho các client khác
+        if (photonView != null && photonView.IsMine)
+        {
+            if (spawnData != null)
+                StartCoroutine(SpawnEntriesSequentially());
+        }
+        else if (photonView != null)
+        {
+            // Remote client: nhận spawn data từ RPC
+            // Sẽ được gọi từ RPC_SyncSpawnData
+        }
+    }
+
+    /// <summary>
+    /// RPC để sync spawn data từ local player tới các client khác
+    /// </summary>
+    [PunRPC]
+    void RPC_SyncSpawnData(Vector3 casterPos, Vector3 mousePos, int targetViewID, string spawnDataPath)
+    {
+        this.casterPos = casterPos;
+        this.mousePos = mousePos;
+        this.targetViewID = targetViewID;
+
+        // Tìm target từ ViewID
+        if (targetViewID >= 0)
+        {
+            PhotonView targetPV = PhotonView.Find(targetViewID);
+            if (targetPV != null)
+            {
+                target = targetPV.transform;
+            }
+        }
+
+        // Load spawn data từ Resources (giả sử có path)
+        // Nếu spawnData là ScriptableObject, cần load từ Resources hoặc dùng reference
+        // Tạm thời giả định spawnData đã được set trước đó hoặc cần cách khác để sync
 
         if (spawnData != null)
             StartCoroutine(SpawnEntriesSequentially());
@@ -260,8 +309,51 @@ public class SkillSpawnmer : MonoBehaviour
      SkillMovementType mtype,
      HashSet<SkillObject> exploded = null)
     {
-        var obj = Instantiate(skillObjectPrefab, pos, Quaternion.identity);
+        GameObject obj;
+        
+        // Chỉ spawn qua PhotonNetwork nếu đang trong multiplayer và là owner
+        if (photonView != null && photonView.IsMine && PhotonNetwork.IsConnected && PhotonNetwork.InRoom)
+        {
+            // Tìm skill ID để pass qua InstantiationData
+            int skillID = -1;
+            if (SkillDatabase.Instance != null && data != null)
+            {
+                skillID = SkillDatabase.Instance.GetSkillID(data);
+            }
+
+            // Spawn qua PhotonNetwork với InstantiationData (skillID, targetViewID, casterPos, mousePos, isExplosive, movementType)
+            object[] instantiationData = new object[]
+            {
+                skillID,
+                targetViewID,
+                casterPos,
+                mousePos,
+                isExplosive,
+                (int)mtype
+            };
+
+            obj = PhotonNetwork.Instantiate("Prefabs/SkillObject", pos, Quaternion.identity, 0, instantiationData);
+        }
+        else
+        {
+            // Single player hoặc remote client: instantiate thường
+            obj = Instantiate(skillObjectPrefab, pos, Quaternion.identity);
+        }
+
         var sk = obj.GetComponent<SkillObject>();
+        if (sk == null)
+        {
+            Debug.LogError("[SkillSpawnmer] SkillObject component not found!");
+            if (photonView != null && photonView.IsMine && PhotonNetwork.IsConnected)
+            {
+                PhotonNetwork.Destroy(obj);
+            }
+            else
+            {
+                Destroy(obj);
+            }
+            return null;
+        }
 
         // REGISTER EVENT BEFORE PLAYING LOGIC
         if (exploded != null)
@@ -273,7 +365,24 @@ public class SkillSpawnmer : MonoBehaviour
             };
         }
 
-        sk.Init(data, casterPos, mousePos, isExplosive,mtype, target);
+        // Tìm lại target từ ViewID nếu cần
+        Transform targetTransform = target;
+        if (targetTransform == null && targetViewID >= 0)
+        {
+            PhotonView targetPV = PhotonView.Find(targetViewID);
+            if (targetPV != null)
+            {
+                targetTransform = targetPV.transform;
+            }
+        }
+
+        // Chỉ gọi Init() nếu là owner hoặc không có PhotonView
+        // Remote client sẽ nhận data qua OnPhotonInstantiate
+        if (photonView == null || photonView.IsMine)
+        {
+            sk.Init(data, casterPos, mousePos, isExplosive, mtype, targetTransform);
+        }
+        
         return sk;
     }
 

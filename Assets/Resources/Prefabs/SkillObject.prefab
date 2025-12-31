@@ -212,6 +212,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1003989259531485421}
   - component: {fileID: 651091236294763124}
+  - component: {fileID: -5597554326044126084}
   m_Layer: 0
   m_Name: SkillObject
   m_TagString: Untagged
@@ -254,6 +255,29 @@ MonoBehaviour:
   sparkleAnim: {fileID: 1028742179248367154}
   aftermathAnim: {fileID: 4156890734890651865}
   skyHeight: 300
+--- !u!114 &-5597554326044126084
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7553527032138624160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa584fbee541324448dd18d8409c7a41, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ObservedComponentsFoldoutOpen: 1
+  Group: 0
+  prefixField: -1
+  Synchronization: 3
+  OwnershipTransfer: 0
+  observableSearch: 2
+  ObservedComponents:
+  - {fileID: 651091236294763124}
+  sceneViewId: 0
+  InstantiationId: 0
+  isRuntimeInstantiated: 0
 --- !u!1 &8083787248462207205
 GameObject:
   m_ObjectHideFlags: 0

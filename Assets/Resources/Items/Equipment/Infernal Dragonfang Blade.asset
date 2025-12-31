@@ -9,16 +9,16 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 660152403c2de554c867ad949029768b, type: 3}
-  m_Name: Infernal Blade
+  m_Script: {fileID: 11500000, guid: ab450b9f7404f474da56a0214e5d1ce9, type: 3}
+  m_Name: Infernal Dragonfang Blade
   m_EditorClassIdentifier: 
   itemID: 3
   itemName: Infernal Dragonfang Blade
   description: Forged from a fossilized dragon fang, its eternal flames grow stronger
     with every soul it severs.
   icon: {fileID: 21300000, guid: 1e9150a536267ed44b7d29df294f6d8a, type: 3}
-  category: 0
-  rarity: 0
+  category: 1
+  rarity: 2
   withdrawable: 1
   nftContractAddress: 0x02DF0ccd422e6126C0Fd30a203B950eB0015d08A
   metadataCID: bafkreie52oetcyjcj2g4kny7lctdvsph2al7b4h2owcombbsc5aqsl5bju
@@ -26,3 +26,7 @@ MonoBehaviour:
   defense: 0
   stylePoints: 0
   variantId: 13
+  attackSkill: {fileID: 11400000, guid: bfa6ec8a7f0ea744cb16b1584fcaea73, type: 2}
+  attackSkillChance: 1
+  attackSkillDelay: 0.2
+  attackDamage: 20

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -16,6 +17,7 @@ public class ItemInfoPanel : MonoBehaviour
     [SerializeField] private Button useButton; // Button để use/unequip item (cho EquipmentItem)
     [SerializeField] private TextMeshProUGUI useButtonText; // Text component của useButton để đổi text
     [SerializeField] private Image useButtonBackground; // Image background của useButton để đổi màu
+    [SerializeField] private Button sellButton; // Button để bán item (chỉ hiện khi item từ wallet)
 
     private void Awake()
     {
@@ -74,6 +76,15 @@ public class ItemInfoPanel : MonoBehaviour
             }
         }
 
+        if (sellButton == null)
+        {
+            Transform sellTransform = transform.Find("SellButton");
+            if (sellTransform != null)
+            {
+                sellButton = sellTransform.GetComponent<Button>();
+            }
+        }
+
         // Tự động tìm useButtonText và useButtonBackground
         if (useButton != null)
         {
@@ -109,10 +120,18 @@ public class ItemInfoPanel : MonoBehaviour
             useButton.onClick.RemoveAllListeners();
             // Sẽ được set động trong ShowItemInfo dựa trên isFromEquipping
         }
+
+        // Setup sell button click
+        if (sellButton != null)
+        {
+            sellButton.onClick.RemoveAllListeners();
+            sellButton.onClick.AddListener(OnSellButtonClicked);
+        }
     }
 
     private ItemData currentItemData;
     private bool currentItemIsFromWallet = false; // Track item hiện tại có từ wallet không
+    private WalletInventoryManager.WalletNFT currentWalletNFT = null; // NFT data nếu item từ wallet
     private Color originalButtonColor = Color.white; // Lưu màu gốc của button
 
     private void Start()
@@ -127,7 +146,8 @@ public class ItemInfoPanel : MonoBehaviour
     /// <param name="itemData">ItemData của item</param>
     /// <param name="isFromWallet">True nếu item từ wallet inventory (đã withdraw), false nếu từ inventory thường</param>
     /// <param name="isFromEquipping">True nếu item từ equipping tab</param>
-    public void ShowItemInfo(ItemData itemData, bool isFromWallet = false, bool isFromEquipping = false)
+    /// <param name="walletNFT">WalletNFT data nếu item từ wallet (để lấy tokenId)</param>
+    public void ShowItemInfo(ItemData itemData, bool isFromWallet = false, bool isFromEquipping = false, WalletInventoryManager.WalletNFT walletNFT = null)
     {
         if (itemData == null)
         {
@@ -137,6 +157,7 @@ public class ItemInfoPanel : MonoBehaviour
 
         currentItemData = itemData;
         currentItemIsFromWallet = isFromWallet; // Lưu flag isFromWallet
+        currentWalletNFT = walletNFT; // Lưu NFT data nếu có
 
         // Update icon
         if (iconImage != null)
@@ -179,7 +200,7 @@ public class ItemInfoPanel : MonoBehaviour
             else
             {
                 // Item từ inventory thường - enable nếu có thể withdraw
-                withdrawButton.interactable = itemData.withdrawable;
+            withdrawButton.interactable = itemData.withdrawable;
             }
         }
 
@@ -231,6 +252,15 @@ public class ItemInfoPanel : MonoBehaviour
                     useButton.onClick.AddListener(OnUseButtonClicked);
                 }
             }
+        }
+
+        // Update sell button
+        // - Chỉ hiển thị khi item từ wallet (đã withdraw, có tokenId)
+        if (sellButton != null)
+        {
+            bool shouldShowSell = isFromWallet && walletNFT != null && !string.IsNullOrEmpty(walletNFT.tokenId);
+            sellButton.gameObject.SetActive(shouldShowSell);
+            sellButton.interactable = shouldShowSell;
         }
 
         // Hiển thị panel
@@ -379,6 +409,157 @@ public class ItemInfoPanel : MonoBehaviour
         else
         {
             Debug.LogWarning("[ItemInfoPanel] Item is not an EquipmentItem!");
+        }
+    }
+
+    /// <summary>
+    /// Xử lý khi click sell button
+    /// </summary>
+    private void OnSellButtonClicked()
+    {
+        if (currentItemData == null || !currentItemIsFromWallet || currentWalletNFT == null)
+        {
+            Debug.LogWarning("[ItemInfoPanel] Cannot sell: item is not from wallet or missing NFT data!");
+            return;
+        }
+
+        // Hiển thị dialog để nhập giá bán
+        if (UIManager.Instance != null && UIManager.Instance.DialogFactory != null)
+        {
+            var dialog = UIManager.Instance.DialogFactory.CreateSellItemDialog();
+            if (dialog != null)
+            {
+                dialog.Setup(currentItemData, currentWalletNFT, OnSellConfirmed);
+                dialog.Show();
+            }
+            else
+            {
+                Debug.LogError("[ItemInfoPanel] SellItemDialog prefab is not assigned in DialogFactory!");
+            }
+        }
+        else
+        {
+            Debug.LogError("[ItemInfoPanel] UIManager or DialogFactory not found!");
+        }
+    }
+
+    /// <summary>
+    /// Callback khi sell được confirm
+    /// </summary>
+    private void OnSellConfirmed(string tokenId, string price)
+    {
+        if (MarketplaceManager.Instance == null)
+        {
+            Debug.LogError("[ItemInfoPanel] MarketplaceManager is null!");
+            return;
+        }
+
+        if (currentItemData == null || currentWalletNFT == null)
+        {
+            Debug.LogError("[ItemInfoPanel] currentItemData hoặc currentWalletNFT is null!");
+            return;
+        }
+
+        // Convert tokenId từ hex string sang int rồi lại sang hex (để đảm bảo format đúng)
+        string tokenIdHex = ConvertTokenIdToHex(tokenId);
+
+        // Convert price từ GTK sang wei (price * 10^18)
+        string priceInWei = ConvertGTKToWei(price);
+
+        // Lấy seller address từ wallet
+        string sellerAddress = InventoryManager.Instance?.GetWalletAddress();
+        if (string.IsNullOrEmpty(sellerAddress))
+        {
+            Debug.LogError("[ItemInfoPanel] Wallet address chưa được set! Vui lòng liên kết ví trước.");
+            return;
+        }
+
+        // Lưu listing vào PlayFab Title Data ngay khi confirm (pre-list)
+        if (MarketplacePlayFabManager.Instance != null)
+        {
+            MarketplacePlayFabManager.Instance.AddListing(
+                tokenIdHex,
+                sellerAddress,
+                priceInWei,
+                currentItemData.itemID,
+                "" // transactionHash sẽ được update sau khi transaction thành công
+            );
+            Debug.Log($"[ItemInfoPanel] Đã lưu listing vào PlayFab Title Data: TokenId={tokenIdHex}, Price={price} GTK");
+        }
+        else
+        {
+            Debug.LogWarning("[ItemInfoPanel] MarketplacePlayFabManager chưa được khởi tạo!");
+        }
+
+        // Mở trang web để ký transaction bán
+        MarketplaceManager.Instance.OpenSellItemPage(tokenIdHex, price);
+    }
+
+    /// <summary>
+    /// Convert GTK (Game Token) sang wei (price * 10^18)
+    /// </summary>
+    private string ConvertGTKToWei(string gtkPrice)
+    {
+        try
+        {
+            // Parse price từ string
+            if (!float.TryParse(gtkPrice, out float priceFloat))
+            {
+                Debug.LogWarning($"[ItemInfoPanel] Không thể parse price '{gtkPrice}'");
+                return "0";
+            }
+
+            // Convert sang wei (multiply by 10^18)
+            System.Numerics.BigInteger priceWei = (System.Numerics.BigInteger)(priceFloat * Math.Pow(10, 18));
+            
+            // Convert sang hex string
+            string hex = priceWei.ToString("X");
+            // Pad to even length
+            if (hex.Length % 2 != 0)
+            {
+                hex = "0" + hex;
+            }
+            return "0x" + hex;
+        }
+        catch (Exception e)
+        {
+            Debug.LogWarning($"[ItemInfoPanel] Lỗi convert GTK to wei: {e.Message}");
+            return "0";
+        }
+    }
+
+    /// <summary>
+    /// Convert tokenId sang hex format (nếu chưa phải hex)
+    /// </summary>
+    private string ConvertTokenIdToHex(string tokenId)
+    {
+        if (string.IsNullOrEmpty(tokenId))
+        {
+            return "0x0";
+        }
+
+        // Nếu đã là hex format (có "0x"), giữ nguyên
+        if (tokenId.StartsWith("0x", System.StringComparison.OrdinalIgnoreCase))
+        {
+            return tokenId;
+        }
+
+        // Nếu là số int, convert sang hex
+        if (int.TryParse(tokenId, out int tokenIdInt))
+        {
+            return $"0x{tokenIdInt:X}"; // Convert int sang hex với format "0x..."
+        }
+
+        // Nếu không parse được, thử parse như hex string không có prefix
+        try
+        {
+            int parsed = Convert.ToInt32(tokenId, 16);
+            return $"0x{parsed:X}";
+        }
+        catch
+        {
+            Debug.LogWarning($"[ItemInfoPanel] Không thể convert tokenId '{tokenId}' sang hex, dùng giá trị gốc");
+            return tokenId;
         }
     }
 

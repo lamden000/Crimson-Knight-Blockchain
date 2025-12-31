@@ -12,9 +12,9 @@ public class WithdrawManager : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private string defaultContractAddress = ""; // Địa chỉ contract mặc định (fallback nếu ItemData không có)
     [SerializeField] private string gameTokenContractAddress = ""; // Địa chỉ contract GameToken (SpiritShard/GTK)
-    [SerializeField] private string withdrawWebPath = "WithdrawWeb/index.html"; // Đường dẫn tới file HTML
-    [SerializeField] private string withdrawCoinWebPath = "WithdrawWeb/withdraw-coin.html"; // Đường dẫn tới file withdraw coin HTML
-    [SerializeField] private string linkWalletWebPath = "WithdrawWeb/link-wallet.html"; // Đường dẫn tới file link wallet HTML
+    [SerializeField] private string withdrawWebPath = "BlockchainWeb/index.html"; // Đường dẫn tới file HTML
+    [SerializeField] private string withdrawCoinWebPath = "BlockchainWeb/withdraw-coin.html"; // Đường dẫn tới file withdraw coin HTML
+    [SerializeField] private string linkWalletWebPath = "BlockchainWeb/link-wallet.html"; // Đường dẫn tới file link wallet HTML
     [SerializeField] private bool useLocalhost = true; // Sử dụng localhost:8000 thay vì file:// (khuyến nghị)
     [SerializeField] private int localhostPort = 8000; // Port cho localhost server
 
@@ -223,28 +223,43 @@ public class WithdrawManager : MonoBehaviour
     /// </summary>
     private string GetHTMLPath()
     {
-        // Tìm file trong Assets folder
+        // Tìm file trong nhiều vị trí có thể
+        string fileName = Path.GetFileName(withdrawWebPath); // "index.html"
+        string folderName = Path.GetDirectoryName(withdrawWebPath).Replace('\\', '/'); // "WithdrawWeb"
+        
         string[] possiblePaths = {
+            // Trong build folder: Application.dataPath/_Data/WithdrawWeb/ (nếu copy vào StreamingAssets)
+            Path.Combine(Application.streamingAssetsPath, folderName, fileName),
+            // Trong build folder: Application.dataPath/../WithdrawWeb/ (nếu copy vào root build folder)
+            Path.Combine(Application.dataPath, "..", folderName, fileName),
+            // Trong editor: Assets/WithdrawWeb/
             Path.Combine(Application.dataPath, withdrawWebPath),
             Path.Combine(Application.dataPath, "..", withdrawWebPath),
+            // Trong current directory
             Path.Combine(Directory.GetCurrentDirectory(), withdrawWebPath),
-            Path.Combine(Application.streamingAssetsPath, "..", "..", withdrawWebPath)
+            Path.Combine(Directory.GetCurrentDirectory(), folderName, fileName),
+            // Trong build folder root
+            Path.Combine(Path.GetDirectoryName(Application.dataPath), folderName, fileName)
         };
 
         foreach (string path in possiblePaths)
         {
-            if (File.Exists(path))
+            string normalizedPath = Path.GetFullPath(path); // Normalize path
+            if (File.Exists(normalizedPath))
             {
-                Debug.Log($"[WithdrawManager] Tìm thấy HTML tại: {path}");
-                return path;
+                Debug.Log($"[WithdrawManager] Tìm thấy index.html tại: {normalizedPath}");
+                return normalizedPath;
             }
         }
 
         Debug.LogWarning($"[WithdrawManager] Không tìm thấy file HTML tại các đường dẫn:");
         foreach (string path in possiblePaths)
         {
-            Debug.LogWarning($"  - {path}");
+            Debug.LogWarning($"  - {Path.GetFullPath(path)}");
         }
+        Debug.LogWarning($"[WithdrawManager] Application.dataPath: {Application.dataPath}");
+        Debug.LogWarning($"[WithdrawManager] Application.streamingAssetsPath: {Application.streamingAssetsPath}");
+        Debug.LogWarning($"[WithdrawManager] Directory.GetCurrentDirectory(): {Directory.GetCurrentDirectory()}");
 
         return null;
     }
@@ -291,28 +306,43 @@ public class WithdrawManager : MonoBehaviour
     /// </summary>
     private string GetLinkWalletHTMLPath()
     {
-        // Tìm file trong Assets folder
+        // Tìm file trong nhiều vị trí có thể
+        string fileName = Path.GetFileName(linkWalletWebPath); // "link-wallet.html"
+        string folderName = Path.GetDirectoryName(linkWalletWebPath).Replace('\\', '/'); // "WithdrawWeb"
+        
         string[] possiblePaths = {
+            // Trong build folder: Application.dataPath/_Data/WithdrawWeb/ (nếu copy vào StreamingAssets)
+            Path.Combine(Application.streamingAssetsPath, folderName, fileName),
+            // Trong build folder: Application.dataPath/../WithdrawWeb/ (nếu copy vào root build folder)
+            Path.Combine(Application.dataPath, "..", folderName, fileName),
+            // Trong editor: Assets/WithdrawWeb/
             Path.Combine(Application.dataPath, linkWalletWebPath),
             Path.Combine(Application.dataPath, "..", linkWalletWebPath),
+            // Trong current directory
             Path.Combine(Directory.GetCurrentDirectory(), linkWalletWebPath),
-            Path.Combine(Application.streamingAssetsPath, "..", "..", linkWalletWebPath)
+            Path.Combine(Directory.GetCurrentDirectory(), folderName, fileName),
+            // Trong build folder root
+            Path.Combine(Path.GetDirectoryName(Application.dataPath), folderName, fileName)
         };
 
         foreach (string path in possiblePaths)
         {
-            if (File.Exists(path))
+            string normalizedPath = Path.GetFullPath(path); // Normalize path
+            if (File.Exists(normalizedPath))
             {
-                Debug.Log($"[WithdrawManager] Tìm thấy link-wallet.html tại: {path}");
-                return path;
+                Debug.Log($"[WithdrawManager] Tìm thấy link-wallet.html tại: {normalizedPath}");
+                return normalizedPath;
             }
         }
 
         Debug.LogWarning($"[WithdrawManager] Không tìm thấy file link-wallet.html tại các đường dẫn:");
         foreach (string path in possiblePaths)
         {
-            Debug.LogWarning($"  - {path}");
+            Debug.LogWarning($"  - {Path.GetFullPath(path)}");
         }
+        Debug.LogWarning($"[WithdrawManager] Application.dataPath: {Application.dataPath}");
+        Debug.LogWarning($"[WithdrawManager] Application.streamingAssetsPath: {Application.streamingAssetsPath}");
+        Debug.LogWarning($"[WithdrawManager] Directory.GetCurrentDirectory(): {Directory.GetCurrentDirectory()}");
 
         return null;
     }
@@ -412,28 +442,43 @@ public class WithdrawManager : MonoBehaviour
     /// </summary>
     private string GetWithdrawCoinHTMLPath()
     {
-        // Tìm file trong Assets folder
+        // Tìm file trong nhiều vị trí có thể
+        string fileName = Path.GetFileName(withdrawCoinWebPath); // "withdraw-coin.html"
+        string folderName = Path.GetDirectoryName(withdrawCoinWebPath).Replace('\\', '/'); // "WithdrawWeb"
+        
         string[] possiblePaths = {
+            // Trong build folder: Application.dataPath/_Data/WithdrawWeb/ (nếu copy vào StreamingAssets)
+            Path.Combine(Application.streamingAssetsPath, folderName, fileName),
+            // Trong build folder: Application.dataPath/../WithdrawWeb/ (nếu copy vào root build folder)
+            Path.Combine(Application.dataPath, "..", folderName, fileName),
+            // Trong editor: Assets/WithdrawWeb/
             Path.Combine(Application.dataPath, withdrawCoinWebPath),
             Path.Combine(Application.dataPath, "..", withdrawCoinWebPath),
+            // Trong current directory
             Path.Combine(Directory.GetCurrentDirectory(), withdrawCoinWebPath),
-            Path.Combine(Application.streamingAssetsPath, "..", "..", withdrawCoinWebPath)
+            Path.Combine(Directory.GetCurrentDirectory(), folderName, fileName),
+            // Trong build folder root
+            Path.Combine(Path.GetDirectoryName(Application.dataPath), folderName, fileName)
         };
 
         foreach (string path in possiblePaths)
         {
-            if (File.Exists(path))
+            string normalizedPath = Path.GetFullPath(path); // Normalize path
+            if (File.Exists(normalizedPath))
             {
-                Debug.Log($"[WithdrawManager] Tìm thấy withdraw-coin.html tại: {path}");
-                return path;
+                Debug.Log($"[WithdrawManager] Tìm thấy withdraw-coin.html tại: {normalizedPath}");
+                return normalizedPath;
             }
         }
 
         Debug.LogWarning($"[WithdrawManager] Không tìm thấy file withdraw-coin.html tại các đường dẫn:");
         foreach (string path in possiblePaths)
         {
-            Debug.LogWarning($"  - {path}");
+            Debug.LogWarning($"  - {Path.GetFullPath(path)}");
         }
+        Debug.LogWarning($"[WithdrawManager] Application.dataPath: {Application.dataPath}");
+        Debug.LogWarning($"[WithdrawManager] Application.streamingAssetsPath: {Application.streamingAssetsPath}");
+        Debug.LogWarning($"[WithdrawManager] Directory.GetCurrentDirectory(): {Directory.GetCurrentDirectory()}");
 
         return null;
     }

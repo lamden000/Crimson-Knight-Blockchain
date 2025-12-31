@@ -44,6 +44,7 @@ MonoBehaviour:
   - RPC_SyncHealth
   - RPC_ApplyDamage
   - RPC_SyncPosition
+  - RPC_SyncSpawnData
   DisableAutoOpenWizard: 1
   ShowSettings: 0
   DevRegionSetOnce: 1

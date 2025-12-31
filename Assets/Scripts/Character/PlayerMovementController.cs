@@ -354,7 +354,30 @@ public class PlayerMovementController : MovementControllerBase
             else
                 anim.SetAnimation(Direction.Down, State.Attack);
         }
-        targetEnemy.gameObject.GetComponent<Monster>().RequestDamage(character.damage, gameObject);
+
+        // Tính damage (có thể thêm weapon damage bonus)
+        int finalDamage = character.damage;
+        
+        // Kiểm tra weapon đang equip và spawn skill nếu có
+        if (EquippingUI.Instance != null)
+        {
+            WeaponItem weapon = EquippingUI.Instance.GetEquippedWeapon();
+            if (weapon != null)
+            {
+                // Thêm damage bonus từ weapon
+                finalDamage += weapon.attackDamage;
+                
+                // Spawn skill nếu weapon có skill và đạt xác suất
+                if (weapon.ShouldSpawnSkillOnAttack())
+                {
+                    Vector3 targetPosition = targetEnemy != null ? targetEnemy.position : transform.position + dir.normalized;
+                    // Pass this (MonoBehaviour) để có thể chạy coroutine
+                    weapon.SpawnAttackSkill(this, transform.position, targetPosition, targetEnemy);
+                }
+            }
+        }
+
+        targetEnemy.gameObject.GetComponent<Monster>().RequestDamage(finalDamage, gameObject);
     }
 
     private void ManualMove()

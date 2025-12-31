@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Item - Marketplace</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-box.info {
+            border-left-color: #3498db;
+            background: #eef;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .wallet-info {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        .item-info {
+            background: #fff9e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            border-color: #d0d0d0;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .network-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Buy Item</h1>
+        <p class="subtitle">Mua NFT từ marketplace</p>
+
+        <div id="statusBox" class="status-box info">
+            <div class="status-text">Đang chờ kết nối MetaMask...</div>
+        </div>
+
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <strong>Địa chỉ ví:</strong>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="network-info" id="networkInfo"></div>
+        </div>
+
+        <div id="itemInfo" class="item-info" style="display: none;">
+            <strong>Thông tin Item:</strong>
+            <div style="margin-top: 10px;">
+                <div>Token ID: <strong id="tokenId">-</strong></div>
+                <div>Giá: <strong id="price">-</strong> GTK</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="marketplaceAddress">Marketplace Contract:</label>
+            <input type="text" id="marketplaceAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="tokenAddress">GameToken Contract:</label>
+            <input type="text" id="tokenAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <button id="connectBtn" onclick="connectWallet()">🔗 Kết nối MetaMask</button>
+        <button id="switchNetworkBtn" onclick="switchToAmoy()" disabled class="button-secondary" style="display: none;">🔄 Chuyển sang Polygon Amoy</button>
+        <button id="approveBtn" onclick="approveToken()" disabled>✅ Approve Token</button>
+        <button id="buyBtn" onclick="buyItem()" disabled>🛒 Buy Item</button>
+    </div>
+
+    <script>
+        let web3;
+        let userAccount;
+        let marketplaceContract;
+        let tokenContract;
+        let marketplaceAddress = '';
+        let tokenAddress = '';
+        let tokenId = '';
+        let price = '';
+
+        // ABI của Marketplace contract
+        const MARKETPLACE_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+                ],
+                "name": "buyItem",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        // ABI của ERC20 (approve, allowance)
+        const ERC20_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "spender", "type": "address"},
+                    {"internalType": "uint256", "name": "amount", "type": "uint256"}
+                ],
+                "name": "approve",
+                "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "owner", "type": "address"},
+                    {"internalType": "address", "name": "spender", "type": "address"}
+                ],
+                "name": "allowance",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "account", "type": "address"}
+                ],
+                "name": "balanceOf",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // Lấy parameters từ URL
+        function getURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            
+            marketplaceAddress = params.get('marketplace') || '';
+            tokenAddress = params.get('token') || '';
+            tokenId = params.get('tokenId') || '';
+            price = params.get('price') || '';
+
+            if (marketplaceAddress) {
+                document.getElementById('marketplaceAddress').value = marketplaceAddress;
+            }
+            if (tokenAddress) {
+                document.getElementById('tokenAddress').value = tokenAddress;
+            }
+            if (tokenId) {
+                document.getElementById('tokenId').textContent = tokenId;
+                document.getElementById('itemInfo').style.display = 'block';
+            }
+            if (price) {
+                document.getElementById('price').textContent = price;
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.querySelector('.status-text').textContent = message;
+        }
+
+        // Kết nối MetaMask
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask chưa được cài đặt!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Revoke permissions trước để force popup chọn tài khoản
+                try {
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (e) {
+                            console.log('Cannot revoke permissions:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.log('wallet_getPermissions not supported:', e);
+                }
+
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+
+                userAccount = accounts[0];
+                web3 = new Web3(window.ethereum);
+
+                document.getElementById('walletAddress').textContent = userAccount;
+                document.getElementById('walletInfo').style.display = 'block';
+
+                const chainId = await web3.eth.getChainId();
+                const networkNames = {
+                    1: 'Ethereum Mainnet',
+                    80002: 'Polygon Amoy Testnet',
+                    137: 'Polygon Mainnet'
+                };
+                const networkName = networkNames[chainId] || `Chain ID: ${chainId}`;
+                document.getElementById('networkInfo').textContent = `Network: ${networkName}`;
+
+                await ensureAmoyNetwork();
+
+                if (!marketplaceAddress || !tokenAddress) {
+                    showStatus('⚠️ Contract addresses chưa được set từ game!', 'error');
+                    return;
+                }
+
+                marketplaceAddress = web3.utils.toChecksumAddress(marketplaceAddress);
+                tokenAddress = web3.utils.toChecksumAddress(tokenAddress);
+
+                marketplaceContract = new web3.eth.Contract(MARKETPLACE_ABI, marketplaceAddress);
+                tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
+
+                // Check token balance
+                const balance = await tokenContract.methods.balanceOf(userAccount).call();
+                const priceInWei = web3.utils.toWei(price || '0', 'ether');
+                if (web3.utils.toBN(balance).lt(web3.utils.toBN(priceInWei))) {
+                    showStatus('❌ Không đủ token để mua!', 'error');
+                }
+
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
+                document.getElementById('approveBtn').disabled = false;
+
+                const currentChainId = await web3.eth.getChainId();
+                if (currentChainId != 80002) {
+                    document.getElementById('switchNetworkBtn').style.display = 'block';
+                    document.getElementById('switchNetworkBtn').disabled = false;
+                } else {
+                    showStatus('✅ Đã kết nối!', 'success');
+                }
+
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                if (error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
+                } else {
+                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Chuyển sang Polygon Amoy
+        async function switchToAmoy() {
+            await ensureAmoyNetwork();
+        }
+
+        async function ensureAmoyNetwork() {
+            try {
+                const chainId = await web3.eth.getChainId();
+                if (chainId == 80002) return true;
+
+                showStatus('⏳ Đang chuyển sang Polygon Amoy...', 'info');
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x13882' }],
+                });
+                setTimeout(() => location.reload(), 1500);
+                return true;
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x13882',
+                            chainName: 'Polygon Amoy Testnet',
+                            nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+                            rpcUrls: ['https://rpc-amoy.polygon.technology'],
+                            blockExplorerUrls: ['https://www.oklink.com/amoy']
+                        }],
+                    });
+                    setTimeout(() => location.reload(), 1500);
+                    return true;
+                }
+                showStatus('❌ Không thể chuyển network.', 'error');
+                return false;
+            }
+        }
+
+        // Approve Token
+        async function approveToken() {
+            try {
+                if (!tokenContract || !userAccount || !price) {
+                    showStatus('❌ Vui lòng kết nối MetaMask và có giá!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang approve token...', 'info');
+                document.getElementById('approveBtn').disabled = true;
+                document.getElementById('approveBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Convert price to wei
+                const priceInWei = web3.utils.toWei(price, 'ether');
+
+                // Check if already approved
+                const allowance = await tokenContract.methods.allowance(userAccount, marketplaceAddress).call();
+                if (web3.utils.toBN(allowance).gte(web3.utils.toBN(priceInWei))) {
+                    showStatus('✅ Token đã được approve đủ!', 'success');
+                    document.getElementById('buyBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
+                    return;
+                }
+
+                // Approve với số lượng lớn hơn để tránh phải approve nhiều lần
+                const maxApproval = web3.utils.toWei('1000000', 'ether'); // Approve 1M tokens
+                const tx = await tokenContract.methods.approve(marketplaceAddress, maxApproval).send({
+                    from: userAccount
+                });
+
+                showStatus(`✅ Đã approve token! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('buyBtn').disabled = false;
+                document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
+
+            } catch (error) {
+                console.error('Error approving token:', error);
+                if (error.message && error.message.includes('user rejected')) {
+                    showStatus('❌ Bạn đã từ chối giao dịch approve', 'error');
+                } else {
+                    showStatus(`❌ Lỗi approve: ${error.message}`, 'error');
+                }
+                document.getElementById('approveBtn').disabled = false;
+                document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+            }
+        }
+
+        // Buy item
+        async function buyItem() {
+            try {
+                if (!marketplaceContract || !userAccount || !tokenId) {
+                    showStatus('❌ Thiếu thông tin!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang mua item...', 'info');
+                document.getElementById('buyBtn').disabled = true;
+                document.getElementById('buyBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                const tx = await marketplaceContract.methods.buyItem(tokenId).send({
+                    from: userAccount
+                });
+
+                showStatus(`✅ Đã mua item thành công! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('buyBtn').innerHTML = '✅ Đã Mua';
+
+            } catch (error) {
+                console.error('Error buying item:', error);
+                if (error.message && error.message.includes('user rejected')) {
+                    showStatus('❌ Bạn đã từ chối giao dịch mua', 'error');
+                } else {
+                    showStatus(`❌ Lỗi mua: ${error.message}`, 'error');
+                }
+                document.getElementById('buyBtn').disabled = false;
+                document.getElementById('buyBtn').innerHTML = '🛒 Buy Item';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            getURLParams();
+            if (window.location.protocol === 'file:') {
+                showStatus('⚠️ Đang chạy từ file:// - Vui lòng chạy qua HTTP server!', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
+

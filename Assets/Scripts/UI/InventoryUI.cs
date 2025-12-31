@@ -28,8 +28,12 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] private Button refreshTokenBalanceButton; // Button để refresh token balance
     [SerializeField] private TextMeshProUGUI tokenStatusText; // Text hiển thị trạng thái (loading, error, etc.)
     
+    [Header("Marketplace")]
+    [SerializeField] private MarketplaceUI marketplaceUI; // Reference tới MarketplaceUI
+    
     [Header("Settings")]
     [SerializeField] private KeyCode toggleKey = KeyCode.I; // Phím để bật/tắt inventory
+    [SerializeField] private KeyCode marketplaceKey = KeyCode.M; // Phím để mở marketplace
 
     private bool isInventoryOpen = false;
     private Dictionary<int, GameObject> itemSlotInstances = new Dictionary<int, GameObject>();
@@ -91,6 +95,12 @@ public class InventoryUI : MonoBehaviour
         if (equippingUI == null)
         {
             equippingUI = FindAnyObjectByType<EquippingUI>();
+        }
+
+        // Tự động tìm MarketplaceUI nếu chưa được assign
+        if (marketplaceUI == null)
+        {
+            marketplaceUI = FindAnyObjectByType<MarketplaceUI>();
         }
 
         // Đăng ký event từ InventoryManager
@@ -297,6 +307,39 @@ public class InventoryUI : MonoBehaviour
         if (Input.GetKeyDown(toggleKey))
         {
             ToggleInventory();
+        }
+
+        // Kiểm tra phím 'M' để mở marketplace
+        if (Input.GetKeyDown(marketplaceKey))
+        {
+            ToggleMarketplace();
+        }
+    }
+
+    /// <summary>
+    /// Bật/tắt marketplace UI
+    /// </summary>
+    public void ToggleMarketplace()
+    {
+        // Tự động tìm MarketplaceUI nếu chưa được assign
+        if (marketplaceUI == null)
+        {
+            marketplaceUI = FindAnyObjectByType<MarketplaceUI>();
+            if (marketplaceUI == null)
+            {
+                Debug.LogWarning("[InventoryUI] MarketplaceUI không tìm thấy trong scene! Vui lòng thêm MarketplaceUI vào scene.");
+                return;
+            }
+        }
+
+        // Toggle marketplace sử dụng property IsMarketplaceOpen
+        if (marketplaceUI.IsMarketplaceOpen)
+        {
+            marketplaceUI.HideMarketplace();
+        }
+        else
+        {
+            marketplaceUI.ShowMarketplace();
         }
     }
 

@@ -27358,6 +27358,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 751123325994672185, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1124578377194652155, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -27438,61 +27442,45 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 1323779077536598668, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3409511533477837481, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_AnchorMax.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 3409511533477837481, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_AnchorMin.y
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
-    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 3409511533477837481, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: 64
       objectReference: {fileID: 0}
-    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 3409511533477837481, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 64
       objectReference: {fileID: 0}
-    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 3409511533477837481, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 32
       objectReference: {fileID: 0}
-    - target: {fileID: 2804261325324749258, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 3409511533477837481, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 0
+      value: -32
       objectReference: {fileID: 0}
     - target: {fileID: 4288431912416608617, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_Name
       value: Canvas
       objectReference: {fileID: 0}
-    - target: {fileID: 5816266866968525663, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+    - target: {fileID: 4532419822097103254, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 0
+      value: 64
       objectReference: {fileID: 0}
-    - target: {fileID: 6759451295614742183, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
-      propertyPath: m_HorizontalAlignment
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 7821438657838438745, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 68.1492
-      objectReference: {fileID: 0}
-    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 21.4775
-      objectReference: {fileID: 0}
-    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: -2.8982
-      objectReference: {fileID: 0}
-    - target: {fileID: 8042378894615383842, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: 40.2
+    - target: {fileID: 8001146209201823665, guid: abca28f8490353549bec5f3d4fff0790, type: 3}
+      propertyPath: itemInfoPanel
+      value: 
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -27886,6 +27874,9 @@ GameObject:
   - component: {fileID: 1572721659}
   - component: {fileID: 1572721660}
   - component: {fileID: 1572721661}
+  - component: {fileID: 1572721662}
+  - component: {fileID: 1572721663}
+  - component: {fileID: 1572721664}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -27980,9 +27971,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defaultContractAddress: 
   gameTokenContractAddress: 0xe2ed4800e710605fa8225BDb7f4e8F6e13F8bD32
-  withdrawWebPath: WithdrawWeb/index.html
-  withdrawCoinWebPath: WithdrawWeb/withdraw-coin.html
-  linkWalletWebPath: WithdrawWeb/link-wallet.html
+  withdrawWebPath: BlockchainWeb/index.html
+  withdrawCoinWebPath: BlockchainWeb/withdraw-coin.html
+  linkWalletWebPath: BlockchainWeb/link-wallet.html
   useLocalhost: 1
   localhostPort: 8000
 --- !u!114 &1572721660
@@ -28018,6 +28009,57 @@ MonoBehaviour:
   gameTokenContractAddress: 0xe2ed4800e710605fa8225BDb7f4e8F6e13F8bD32
   tokenDecimals: 18
   refreshCooldown: 5
+--- !u!114 &1572721662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1572721652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 296b58a6d40d1fd418f674b71263e7c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  marketplaceContractAddress: 0x02D2E44F726A3805c4Ba8a8dF219a8c56B0919A1
+  nftContractAddress: 0x02DF0ccd422e6126C0Fd30a203B950eB0015d08A
+  gameTokenContractAddress: 0xe2ed4800e710605fa8225BDb7f4e8F6e13F8bD32
+  marketplaceWebPath: BlockchainWeb/sell-item.html
+  buyItemWebPath: BlockchainWeb/buy-item.html
+  useLocalhost: 1
+  localhostPort: 8000
+--- !u!114 &1572721663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1572721652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 211fdc1a209e23543a6e0c1b8906b124, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  alchemyApiKey: eQMwPXs4A8OF-f9jmKLFD
+  alchemyBaseUrl: https://polygon-amoy.g.alchemy.com/v2
+  marketplaceContractAddress: 0x02D2E44F726A3805c4Ba8a8dF219a8c56B0919A1
+  nftContractAddress: 0x02DF0ccd422e6126C0Fd30a203B950eB0015d08A
+  refreshCooldown: 5
+  syncWithBlockchain: 1
+  maxSyncTokenIds: 50
+--- !u!114 &1572721664
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1572721652}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7771aa5e12200f4092a57799421c33a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  useTitleData: 1
 --- !u!114 &1586660885 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3814256712278559084, guid: e1c24fc01d977124e93f9734486fd95d, type: 3}

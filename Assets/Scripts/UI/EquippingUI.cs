@@ -10,6 +10,8 @@ using UnityEngine.EventSystems;
 /// </summary>
 public class EquippingUI : MonoBehaviour
 {
+    public static EquippingUI Instance { get; private set; }
+
     [Header("UI References")]
     [SerializeField] private GameObject equippingPanel; // Panel chứa toàn bộ equipping UI
     [SerializeField] private ItemInfoPanel itemInfoPanel; // Panel hiển thị thông tin item (dùng chung)
@@ -27,6 +29,14 @@ public class EquippingUI : MonoBehaviour
 
     private void Awake()
     {
+        // Singleton pattern
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         // Initialize slot dictionary
         if (headSlot != null) slotUIs[EquipmentSlot.Head] = headSlot;
         if (bodySlot != null) slotUIs[EquipmentSlot.Body] = bodySlot;
@@ -166,6 +176,22 @@ public class EquippingUI : MonoBehaviour
         equipmentItem.Use();
 
         Debug.Log($"[EquippingUI] Equipped {equipmentItem.itemName} to slot {slot} (isFromWallet: {isFromWallet})");
+    }
+
+    /// <summary>
+    /// Lấy weapon đang equip (nếu có)
+    /// </summary>
+    public WeaponItem GetEquippedWeapon()
+    {
+        if (equippedItems.ContainsKey(EquipmentSlot.Weapon))
+        {
+            EquipmentItem item = equippedItems[EquipmentSlot.Weapon];
+            if (item is WeaponItem weaponItem)
+            {
+                return weaponItem;
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -366,6 +392,7 @@ public class EquippingUI : MonoBehaviour
 
     /// <summary>
     /// Tìm EquipmentItem theo slot và variantId
+    /// Ưu tiên tìm WeaponItem cho weapon slot
     /// </summary>
     private EquipmentItem FindEquipmentItemBySlotAndVariant(EquipmentSlot slot, int variantId)
     {
@@ -374,6 +401,22 @@ public class EquippingUI : MonoBehaviour
             return null;
         }
 
+        // Nếu là weapon slot, ưu tiên tìm WeaponItem trước
+        if (slot == EquipmentSlot.Weapon)
+        {
+            foreach (var itemData in ItemDatabase.Instance.allItems)
+            {
+                if (itemData is WeaponItem weaponItem)
+                {
+                    if (weaponItem.slot == slot && weaponItem.variantId == variantId)
+                    {
+                        return weaponItem;
+                    }
+                }
+            }
+        }
+
+        // Tìm EquipmentItem thường (hoặc WeaponItem nếu không tìm thấy ở trên)
         foreach (var itemData in ItemDatabase.Instance.allItems)
         {
             if (itemData is EquipmentItem equipmentItem)
