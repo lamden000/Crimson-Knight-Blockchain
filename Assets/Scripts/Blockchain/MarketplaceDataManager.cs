@@ -19,6 +19,7 @@ public class MarketplaceDataManager : MonoBehaviour
     [Header("Contract Settings")]
     [SerializeField] private string marketplaceContractAddress = ""; // Địa chỉ Marketplace contract
     [SerializeField] private string nftContractAddress = ""; // Địa chỉ NFT contract (RareItem)
+    [SerializeField] private string getListingFunctionSelector = "0x107a274a"; // Function selector cho getListing(uint256) - Đã verify từ Remix
     
     [Header("Settings")]
     [SerializeField] private float refreshCooldown = 5f; // Cooldown giữa các lần refresh (giây)
@@ -264,6 +265,7 @@ public class MarketplaceDataManager : MonoBehaviour
             }
             else
             {
+                Debug.LogWarning($"[MarketplaceDataManager] Không thể parse tokenId: {tokenId}");
                 onComplete?.Invoke(false);
                 yield break;
             }
@@ -271,6 +273,9 @@ public class MarketplaceDataManager : MonoBehaviour
 
         string url = $"{alchemyBaseUrl}/{alchemyApiKey}";
         string requestBody = CreateListingQueryRequest(tokenIdHex);
+        
+        Debug.Log($"[MarketplaceDataManager] Đang check listing status cho tokenId: {tokenId} (hex: {tokenIdHex})");
+        Debug.Log($"[MarketplaceDataManager] Request body: {requestBody}");
         
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {
@@ -286,40 +291,103 @@ public class MarketplaceDataManager : MonoBehaviour
                 try
                 {
                     string jsonResponse = request.downloadHandler.text;
+                    Debug.Log($"[MarketplaceDataManager] Response cho tokenId {tokenId}: {jsonResponse}");
+                    
                     AlchemyRPCResponse rpcResponse = JsonUtility.FromJson<AlchemyRPCResponse>(jsonResponse);
                     
-                    if (rpcResponse != null && rpcResponse.result != null)
+                    if (rpcResponse != null)
                     {
-                        // Parse result: (address seller, uint256 price)
-                        // Result là hex string: 0x + 64 chars (seller) + 64 chars (price)
-                        if (rpcResponse.result.Length >= 130) // 2 + 64 + 64
+                        // Xử lý error (có thể có error code 0 với message rỗng)
+                        if (rpcResponse.error != null)
                         {
-                            string sellerHex = "0x" + rpcResponse.result.Substring(2, 64);
-                            string priceHex = "0x" + rpcResponse.result.Substring(66, 64);
+                            // Error code 0 có thể là success nhưng có error object (một số RPC trả về như vậy)
+                            if (rpcResponse.error.code == 0 && string.IsNullOrEmpty(rpcResponse.error.message))
+                            {
+                                Debug.LogWarning($"[MarketplaceDataManager] RPC trả về error code 0 với message rỗng, tiếp tục parse result...");
+                            }
+                            else
+                            {
+                                Debug.LogError($"[MarketplaceDataManager] RPC Error: {rpcResponse.error.code} - {rpcResponse.error.message}");
+                                onComplete?.Invoke(false);
+                                yield break;
+                            }
+                        }
+                        
+                        if (rpcResponse.result != null)
+                        {
+                            Debug.Log($"[MarketplaceDataManager] Raw result: {rpcResponse.result} (length: {rpcResponse.result.Length})");
                             
-                            // Check nếu seller không phải zero address và price > 0
-                            bool isListed = !IsZeroAddress(sellerHex) && !IsZeroValue(priceHex);
-                            onComplete?.Invoke(isListed);
+                            // Parse result từ getListing(uint256): (address seller, uint256 price, bool isListed)
+                            // Result có thể có hoặc không có 0x prefix
+                            // Format: 64 chars (seller) + 64 chars (price) + 64 chars (isListed) = 192 chars
+                            // Hoặc: 0x + 64 + 64 + 64 = 194 chars
+                            
+                            string resultHex = rpcResponse.result;
+                            if (!resultHex.StartsWith("0x"))
+                            {
+                                resultHex = "0x" + resultHex;
+                            }
+                            
+                            // Kiểm tra độ dài (có thể là 192 hoặc 194 chars)
+                            int expectedLength = 192; // Không có 0x
+                            int actualLength = rpcResponse.result.Length;
+                            
+                            if (actualLength >= expectedLength)
+                            {
+                                // Tính offset (0 nếu không có 0x, 2 nếu có 0x)
+                                int offset = rpcResponse.result.StartsWith("0x") ? 2 : 0;
+                                
+                                string sellerHex = "0x" + rpcResponse.result.Substring(offset, 64);
+                                string priceHex = "0x" + rpcResponse.result.Substring(offset + 64, 64);
+                                string isListedHex = "0x" + rpcResponse.result.Substring(offset + 128, 64);
+                                
+                                Debug.Log($"[MarketplaceDataManager] Parsed - Seller: {sellerHex}, Price: {priceHex}, IsListedHex: {isListedHex}");
+                                
+                                // Check isListed từ contract (bool value ở byte cuối cùng của 32-byte word)
+                                // Bool trong Solidity: false = 0x00...00, true = 0x00...01
+                                // Lấy 2 hex chars cuối cùng (1 byte)
+                                string isListedByte = isListedHex.Substring(isListedHex.Length - 2);
+                                bool contractIsListed = isListedByte != "00";
+                                
+                                // Fallback: check seller và price nếu isListed không rõ ràng
+                                bool fallbackCheck = !IsZeroAddress(sellerHex) && !IsZeroValue(priceHex);
+                                
+                                Debug.Log($"[MarketplaceDataManager] IsListed từ contract: {contractIsListed} (byte: '{isListedByte}'), Fallback check: {fallbackCheck}");
+                                
+                                // Ưu tiên dùng giá trị từ contract
+                                // Nếu contractIsListed = true thì dùng, nếu false thì check fallback
+                                bool isListed = contractIsListed ? true : fallbackCheck;
+                                
+                                Debug.Log($"[MarketplaceDataManager] Final isListed: {isListed}");
+                                onComplete?.Invoke(isListed);
+                            }
+                            else
+                            {
+                                Debug.LogWarning($"[MarketplaceDataManager] Result length không đủ: {actualLength} (cần >= {expectedLength})");
+                                onComplete?.Invoke(false);
+                            }
                         }
                         else
                         {
+                            Debug.LogWarning($"[MarketplaceDataManager] Result là null");
                             onComplete?.Invoke(false);
                         }
                     }
                     else
                     {
+                        Debug.LogWarning($"[MarketplaceDataManager] RPC Response là null");
                         onComplete?.Invoke(false);
                     }
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"[MarketplaceDataManager] Lỗi parse listing status cho tokenId {tokenIdHex}: {e.Message}");
+                    Debug.LogError($"[MarketplaceDataManager] Lỗi parse listing status cho tokenId {tokenIdHex}: {e.Message}\nStack: {e.StackTrace}");
                     onComplete?.Invoke(false);
                 }
             }
             else
             {
-                Debug.LogWarning($"[MarketplaceDataManager] Lỗi check listing status: {request.error}");
+                Debug.LogError($"[MarketplaceDataManager] Lỗi check listing status: {request.error}\nResponse: {request.downloadHandler.text}");
                 // Nếu lỗi, giả sử listing vẫn còn (không remove)
                 onComplete?.Invoke(true);
             }
@@ -328,19 +396,42 @@ public class MarketplaceDataManager : MonoBehaviour
 
 
     /// <summary>
-    /// Tạo JSON-RPC request để query listing
+    /// Tạo JSON-RPC request để query listing bằng getListing(tokenId)
     /// </summary>
     private string CreateListingQueryRequest(string tokenIdHex)
     {
-        // Function signature: listings(uint256)
-        // Function selector: keccak256("listings(uint256)") -> first 4 bytes
-        // Đã tính sẵn: 0x26f4c5e5 (có thể verify bằng web3.js: web3.utils.keccak256("listings(uint256)").substring(0, 10))
+        // Function signature: getListing(uint256)
+        // Function selector: keccak256("getListing(uint256)") -> first 4 bytes
+        // 
+        // CÁCH VERIFY SELECTOR:
+        // 1. Trong Remix: Compile contract -> Tab "Solidity Compiler" -> Copy ABI
+        // 2. Dùng online tool: https://abi.hashex.org/
+        //    - Paste ABI vào, chọn function "getListing", nhập tokenId = 3
+        //    - Xem "data" field, 4 bytes đầu (0x...) chính là selector
+        // 3. Hoặc dùng Web3.js/Ethers.js console:
+        //    web3.utils.keccak256("getListing(uint256)").substring(0, 10)
+        //    ethers.utils.id("getListing(uint256)").substring(0, 10)
+        // 
+        // Selector hiện tại: 0x99a5d324 (CẦN VERIFY LẠI!)
+        // Nếu selector sai, sẽ thấy lỗi trong response hoặc result = "0x0000..."
         // Parameter: tokenId (padded to 32 bytes = 64 hex chars)
         
         // Pad tokenId to 32 bytes (64 hex chars)
         string cleanTokenId = tokenIdHex.StartsWith("0x") ? tokenIdHex.Substring(2) : tokenIdHex;
         string paddedTokenId = cleanTokenId.PadLeft(64, '0');
-        string data = "0x26f4c5e5" + paddedTokenId; // Function selector + parameter
+        
+        // Sử dụng selector từ Inspector (có thể thay đổi nếu verify lại)
+        string selector = getListingFunctionSelector;
+        if (!selector.StartsWith("0x"))
+        {
+            selector = "0x" + selector;
+        }
+        
+        string data = selector + paddedTokenId; // Function selector + parameter
+        
+        Debug.Log($"[MarketplaceDataManager] TokenId: {tokenIdHex} -> Clean: {cleanTokenId} -> Padded: {paddedTokenId}");
+        Debug.Log($"[MarketplaceDataManager] Function selector: {selector} (getListing(uint256))");
+        Debug.Log($"[MarketplaceDataManager] Full data: {data}");
         
         string requestBody = $@"{{
             ""jsonrpc"": ""2.0"",

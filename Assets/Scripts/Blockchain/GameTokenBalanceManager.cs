@@ -125,9 +125,7 @@ public class GameTokenBalanceManager : MonoBehaviour
         // Alchemy API format: {"jsonrpc":"2.0","method":"alchemy_getTokenBalances","params":["0x...", ["0x..."]],"id":1}
         string contractAddressJson = $"[\"{gameTokenContractAddress}\"]";
         string jsonBody = $"{{\"jsonrpc\":\"2.0\",\"method\":\"alchemy_getTokenBalances\",\"params\":[\"{walletAddress}\",{contractAddressJson}],\"id\":1}}";
-        
-        Debug.Log($"[GameTokenBalanceManager] Request URL: {url}");
-        Debug.Log($"[GameTokenBalanceManager] Request Body: {jsonBody}");
+       
 
         using (UnityWebRequest request = new UnityWebRequest(url, "POST"))
         {

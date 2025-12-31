@@ -353,11 +353,6 @@ public class MarketplacePlayFabManager : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log("[MarketplacePlayFabManager] Đã lưu listings lên Title Data qua CloudScript");
-                    if (result.FunctionResult != null)
-                    {
-                        Debug.Log($"[MarketplacePlayFabManager] CloudScript result: {result.FunctionResult}");
-                    }
                     OnMarketplaceDataUpdated?.Invoke();
                 }
             },

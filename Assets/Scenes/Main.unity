@@ -28044,6 +28044,7 @@ MonoBehaviour:
   alchemyBaseUrl: https://polygon-amoy.g.alchemy.com/v2
   marketplaceContractAddress: 0x02D2E44F726A3805c4Ba8a8dF219a8c56B0919A1
   nftContractAddress: 0x02DF0ccd422e6126C0Fd30a203B950eB0015d08A
+  getListingFunctionSelector: 0x107a274a
   refreshCooldown: 5
   syncWithBlockchain: 1
   maxSyncTokenIds: 50
