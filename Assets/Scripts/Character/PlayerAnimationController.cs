@@ -136,8 +136,12 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
             else SetDirectionUp(false);
 
             Vector3 scale = transform.localScale;
-            scale.x = Mathf.Abs(scale.x) * ((dir == (int)Direction.Right) ? -1 : 1);
+            bool isFlipped = (dir == (int)Direction.Right);
+            scale.x = Mathf.Abs(scale.x) * (isFlipped ? -1 : 1);
             transform.localScale = scale;
+
+            // Flip canvas children (name tag, interact prompt, etc.)
+            FlipCanvasChildren(isFlipped);
 
             currentDir = (Direction)dir;
 
@@ -226,7 +230,7 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
         {
             spriteRenderers[CharacterPart.Eyes].gameObject.SetActive(false);
             int hairOrder = spriteRenderers[CharacterPart.Hair].sortingOrder;
-            spriteRenderers[weaponType].sortingOrder = hairOrder;
+            spriteRenderers[weaponType].sortingOrder = hairOrder+2;
             spriteRenderers[CharacterPart.Wings].sortingOrder = hairOrder + 1;
         }
         else
@@ -555,5 +559,21 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
         }
     }
 
+    /// <summary>
+    /// Flip tất cả Canvas children (name tag, interact prompt, etc.) khi character flip
+    /// </summary>
+    private void FlipCanvasChildren(bool isFlipped)
+    {
+        Canvas[] canvases = GetComponentsInChildren<Canvas>(true);
+        foreach (Canvas canvas in canvases)
+        {
+            if (canvas != null)
+            {
+                Vector3 canvasScale = canvas.transform.localScale;
+                canvasScale.x = isFlipped ? -Mathf.Abs(canvasScale.x) : Mathf.Abs(canvasScale.x);
+                canvas.transform.localScale = canvasScale;
+            }
+        }
+    }
 
 }

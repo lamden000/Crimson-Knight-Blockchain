@@ -16,5 +16,5 @@ MonoBehaviour:
   damage: 10
   moveSpeed: 100
   dropTable:
-  - item: {fileID: 11400000, guid: 54894ad0dba3ace4cb019d9dbe88078a, type: 2}
+  - item: {fileID: 11400000, guid: 465ed0185b2f2b64d81ba7f423dc8083, type: 2}
     dropRate: 1

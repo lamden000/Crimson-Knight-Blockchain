@@ -87,6 +87,39 @@ public class MarketplaceManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Mua item từ marketplace (mở trang web để ký transaction)
+    /// </summary>
+    /// <param name="tokenId">Token ID của NFT muốn mua</param>
+    /// <param name="onSuccess">Callback khi mua thành công</param>
+    /// <param name="onFailed">Callback khi mua thất bại</param>
+    public void BuyItem(string tokenId, System.Action onSuccess, System.Action<string> onFailed)
+    {
+        // Lấy price từ MarketplaceDataManager
+        if (MarketplaceDataManager.Instance == null)
+        {
+            onFailed?.Invoke("MarketplaceDataManager chưa được khởi tạo!");
+            return;
+        }
+
+        var listings = MarketplaceDataManager.Instance.GetAllListings();
+        if (!listings.ContainsKey(tokenId))
+        {
+            onFailed?.Invoke("Item không còn trong marketplace!");
+            return;
+        }
+
+        var listing = listings[tokenId];
+        string price = listing.priceInGTK.ToString("F2");
+
+        // Mở trang web để mua
+        OpenBuyItemPage(tokenId, price);
+
+        // Lưu callbacks để có thể gọi sau khi transaction thành công
+        // TODO: Có thể cần implement mechanism để detect transaction success từ web page
+        // Tạm thời chỉ mở web page, user sẽ phải refresh marketplace sau khi mua
+    }
+
+    /// <summary>
     /// Mở trang mua item trong trình duyệt
     /// </summary>
     /// <param name="tokenId">Token ID của NFT muốn mua</param>

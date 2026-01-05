@@ -416,6 +416,9 @@ public class MonsterMovementController : MovementControllerBase, IInRoomCallback
             scale.x = targetScaleX;
             transform.localScale = scale;
 
+            // Flip canvas children (name tag, interact prompt, etc.)
+            FlipCanvasChildren(flip);
+
             // Notify all clients
             GetComponent<PhotonView>().RPC("RPC_Flip", RpcTarget.Others, flip);
         }
@@ -427,6 +430,26 @@ public class MonsterMovementController : MovementControllerBase, IInRoomCallback
         var scale = transform.localScale;
         scale.x = flip ? -Mathf.Abs(scale.x) : Mathf.Abs(scale.x);
         transform.localScale = scale;
+
+        // Flip canvas children (name tag, interact prompt, etc.)
+        FlipCanvasChildren(flip);
+    }
+
+    /// <summary>
+    /// Flip tất cả Canvas children (name tag, interact prompt, etc.) khi monster flip
+    /// </summary>
+    private void FlipCanvasChildren(bool isFlipped)
+    {
+        Canvas[] canvases = GetComponentsInChildren<Canvas>(true);
+        foreach (Canvas canvas in canvases)
+        {
+            if (canvas != null)
+            {
+                Vector3 canvasScale = canvas.transform.localScale;
+                canvasScale.x = isFlipped ? -Mathf.Abs(canvasScale.x) : Mathf.Abs(canvasScale.x);
+                canvas.transform.localScale = canvasScale;
+            }
+        }
     }
 
     void OnDrawGizmos()

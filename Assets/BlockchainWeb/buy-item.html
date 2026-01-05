@@ -239,7 +239,7 @@
             }
         ];
 
-        // ABI của ERC20 (approve, allowance)
+        // ABI của ERC20 (approve, allowance, decimals)
         const ERC20_ABI = [
             {
                 "inputs": [
@@ -267,6 +267,13 @@
                 ],
                 "name": "balanceOf",
                 "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "decimals",
+                "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
                 "stateMutability": "view",
                 "type": "function"
             }
@@ -365,8 +372,25 @@
                     return;
                 }
 
+                // Validate addresses
+                if (!web3.utils.isAddress(marketplaceAddress)) {
+                    showStatus(`❌ Marketplace address không hợp lệ: ${marketplaceAddress}`, 'error');
+                    return;
+                }
+
+                if (!web3.utils.isAddress(tokenAddress)) {
+                    showStatus(`❌ Token address không hợp lệ: ${tokenAddress}`, 'error');
+                    return;
+                }
+
                 marketplaceAddress = web3.utils.toChecksumAddress(marketplaceAddress);
                 tokenAddress = web3.utils.toChecksumAddress(tokenAddress);
+
+                // Debug: Log addresses
+                console.log('Marketplace Address:', marketplaceAddress);
+                console.log('Token Address:', tokenAddress);
+                console.log('Token ID:', tokenId);
+                console.log('Price:', price);
 
                 marketplaceContract = new web3.eth.Contract(MARKETPLACE_ABI, marketplaceAddress);
                 tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
@@ -374,7 +398,10 @@
                 // Check token balance
                 const balance = await tokenContract.methods.balanceOf(userAccount).call();
                 const priceInWei = web3.utils.toWei(price || '0', 'ether');
-                if (web3.utils.toBN(balance).lt(web3.utils.toBN(priceInWei))) {
+                // Convert to BigInt for comparison (Web3.js v4+ không còn toBN)
+                const balanceBigInt = BigInt(balance.toString());
+                const priceBigInt = BigInt(priceInWei.toString());
+                if (balanceBigInt < priceBigInt) {
                     showStatus('❌ Không đủ token để mua!', 'error');
                 }
 
@@ -399,7 +426,7 @@
                 } else if (error.code === -32002) {
                     showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
                 } else {
-                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
                 }
             }
         }
@@ -449,27 +476,212 @@
                     return;
                 }
 
+                // Validate contract addresses
+                if (!web3.utils.isAddress(tokenAddress)) {
+                    showStatus('❌ Token contract address không hợp lệ!', 'error');
+                    return;
+                }
+
+                if (!web3.utils.isAddress(marketplaceAddress)) {
+                    showStatus('❌ Marketplace contract address không hợp lệ!', 'error');
+                    return;
+                }
+
                 showStatus('⏳ Đang approve token...', 'info');
                 document.getElementById('approveBtn').disabled = true;
                 document.getElementById('approveBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
 
-                // Convert price to wei
-                const priceInWei = web3.utils.toWei(price, 'ether');
+                // Kiểm tra decimals của token để convert price đúng
+                let tokenDecimals = 18; // Default là 18 như ether
+                try {
+                    const decimals = await tokenContract.methods.decimals().call();
+                    tokenDecimals = parseInt(decimals);
+                    console.log('Token decimals:', tokenDecimals);
+                } catch (e) {
+                    console.warn('Cannot get token decimals, assuming 18:', e);
+                }
+
+                // Convert price sang đúng format dựa trên decimals
+                let priceInWei;
+                try {
+                    // Convert price (ví dụ: "5.00") sang wei với đúng decimals
+                    // Nếu decimals = 18: "5.00" -> 5000000000000000000
+                    // Nếu decimals = 0: "5.00" -> 5
+                    if (tokenDecimals === 18) {
+                        priceInWei = web3.utils.toWei(price, 'ether');
+                    } else {
+                        // Convert với decimals khác
+                        const priceFloat = parseFloat(price);
+                        const multiplier = Math.pow(10, tokenDecimals);
+                        priceInWei = Math.floor(priceFloat * multiplier).toString();
+                    }
+                    console.log('Price:', price, '-> Price in token units (decimals=' + tokenDecimals + '):', priceInWei);
+                } catch (e) {
+                    // Nếu lỗi, thử dùng giá trị thực (có thể price đã là giá trị đúng)
+                    console.warn('Cannot convert price, using raw value:', e);
+                    priceInWei = price;
+                }
+
+                // Check if contract has approve function
+                try {
+                    const code = await web3.eth.getCode(tokenAddress);
+                    if (code === '0x' || code === '0x0') {
+                        showStatus('❌ Token contract không tồn tại tại địa chỉ này!', 'error');
+                        document.getElementById('approveBtn').disabled = false;
+                        document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Cannot check contract code:', e);
+                }
 
                 // Check if already approved
-                const allowance = await tokenContract.methods.allowance(userAccount, marketplaceAddress).call();
-                if (web3.utils.toBN(allowance).gte(web3.utils.toBN(priceInWei))) {
+                let allowance;
+                try {
+                    allowance = await tokenContract.methods.allowance(userAccount, marketplaceAddress).call();
+                    console.log('Current allowance:', allowance.toString());
+                } catch (e) {
+                    showStatus('❌ Không thể kiểm tra allowance. Contract có thể không hợp lệ.', 'error');
+                    console.error('Error checking allowance:', e);
+                    document.getElementById('approveBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+                    return;
+                }
+
+                // Convert to BigInt for comparison (Web3.js v4+ không còn toBN)
+                const allowanceBigInt = BigInt(allowance.toString());
+                const priceBigInt = BigInt(priceInWei.toString());
+                console.log('Allowance BigInt:', allowanceBigInt.toString(), 'Price BigInt:', priceBigInt.toString());
+                
+                if (allowanceBigInt >= priceBigInt) {
                     showStatus('✅ Token đã được approve đủ!', 'success');
                     document.getElementById('buyBtn').disabled = false;
                     document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
                     return;
                 }
 
-                // Approve với số lượng lớn hơn để tránh phải approve nhiều lần
-                const maxApproval = web3.utils.toWei('1000000', 'ether'); // Approve 1M tokens
-                const tx = await tokenContract.methods.approve(marketplaceAddress, maxApproval).send({
+                 // Approve với số lượng đúng price (không buffer để đơn giản và tránh nhiều popup)
+                 // Chỉ gửi 1 transaction duy nhất để tránh nonce issue và nhiều popup MetaMask
+                 const approvalAmount = priceBigInt.toString();
+                 console.log('Will approve exact price amount (no buffer):', approvalAmount);
+
+                showStatus('⏳ Đang gửi transaction approve...', 'info');
+                console.log('Approving:', {
+                    spender: marketplaceAddress,
+                    amount: approvalAmount,
                     from: userAccount
                 });
+                
+                // Estimate gas trước để kiểm tra
+                let gasEstimate;
+                try {
+                    gasEstimate = await tokenContract.methods.approve(marketplaceAddress, approvalAmount).estimateGas({
+                        from: userAccount
+                    });
+                    console.log('Gas estimate:', gasEstimate.toString());
+                    // Tăng gas limit thêm 30% để an toàn
+                    gasEstimate = Math.floor(parseInt(gasEstimate.toString()) * 1.3);
+                    // Đảm bảo tối thiểu 35000 (dựa trên Remix: ~30000)
+                    if (gasEstimate < 35000) {
+                        gasEstimate = 35000;
+                    }
+                    console.log('Gas limit (with 30% buffer, min 35000):', gasEstimate);
+                } catch (e) {
+                    console.warn('Cannot estimate gas, using default:', e);
+                    // Nếu estimate gas lỗi, dùng giá trị an toàn
+                    gasEstimate = 50000;
+                    console.log('Using default gas limit:', gasEstimate);
+                }
+
+                // Kiểm tra nonce để đảm bảo không có transaction pending
+                try {
+                    const currentNonce = await web3.eth.getTransactionCount(userAccount, 'pending');
+                    const latestNonce = await web3.eth.getTransactionCount(userAccount, 'latest');
+                    console.log('Current nonce (pending):', currentNonce, 'Latest nonce:', latestNonce);
+                    if (currentNonce > latestNonce) {
+                        console.warn('⚠️ Có transaction đang pending, có thể gây nonce conflict');
+                    }
+                } catch (e) {
+                    console.warn('Cannot check nonce:', e);
+                }
+
+                // Kiểm tra transaction có bị revert không bằng cách call trước (không tốn gas)
+                try {
+                    console.log('Checking if transaction will succeed (dry run)...');
+                    await tokenContract.methods.approve(marketplaceAddress, approvalAmount).call({
+                        from: userAccount
+                    });
+                    console.log('✅ Call successful - transaction should work');
+                } catch (callError) {
+                    console.error('❌ Call failed - transaction will revert:', callError);
+                    // Nếu call fail, transaction sẽ revert
+                    let revertReason = 'Unknown reason';
+                    if (callError.reason) {
+                        revertReason = callError.reason;
+                    } else if (callError.message) {
+                        revertReason = callError.message;
+                    }
+                    showStatus(`❌ Transaction sẽ bị revert: ${revertReason}. Kiểm tra lại contract hoặc thử với giá trị nhỏ hơn.`, 'error');
+                    document.getElementById('approveBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+                    return; // Dừng lại, không gửi transaction
+                }
+
+                // Chỉ gửi 1 transaction duy nhất - áp dụng cách làm từ sell-item.html (đã thành công)
+                console.log('Sending approve transaction with explicit gas settings...');
+                
+                // Prepare transaction parameters giống như sell-item.html
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                // Try to use EIP-1559 gas pricing với priority fee cao hơn để match option "Cao" trong MetaMask
+                // Từ MetaMask, option "Cao" = 0.00268219 POL, "Website" = 0.00026066 POL (thấp hơn ~10 lần)
+                // Khi baseFee = 0 GWEI (như trong hình), cần set priority fee và maxFeePerGas cao hơn nhiều
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    let baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    
+                    // Nếu baseFee = 0 hoặc quá thấp, dùng network gasPrice làm base
+                    const baseFeeBigInt = BigInt(baseFee.toString());
+                    if (baseFeeBigInt === BigInt(0)) {
+                        baseFee = await web3.eth.getGasPrice();
+                        console.log('Base fee is 0, using network gasPrice as base:', baseFee);
+                    }
+                    
+                    // Set priority fee cao hơn nhiều (30 gwei) để match với option "Cao" trong MetaMask
+                    // Option "Cao" có priority fee cao hơn "Website" rất nhiều
+                    const maxPriorityFeePerGas = web3.utils.toWei('30', 'gwei');
+                    // Dùng BigInt thay vì toBN (Web3.js v4+)
+                    const baseFeeBigInt2 = BigInt(baseFee.toString());
+                    const maxPriorityBigInt = BigInt(maxPriorityFeePerGas.toString());
+                    // Set maxFeePerGas = baseFee * 5 + priorityFee (cao hơn nhiều để match option "Cao")
+                    const maxFeePerGas = (baseFeeBigInt2 * BigInt(5) + maxPriorityBigInt).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                    console.log('Using EIP-1559 gas pricing (high priority to match "Cao" option):', { 
+                        maxFeePerGas, 
+                        maxPriorityFeePerGas,
+                        baseFee: baseFee.toString()
+                    });
+                } catch (eip1559Error) {
+                    // Fallback to gasPrice với giá cao hơn nhiều
+                    try {
+                        const networkGasPrice = await web3.eth.getGasPrice();
+                        // Tăng gasPrice lên 200% để đảm bảo match với option "Cao"
+                        const networkGasPriceBigInt = BigInt(networkGasPrice.toString());
+                        txParams.gasPrice = (networkGasPriceBigInt * BigInt(200) / BigInt(100)).toString();
+                        console.log('Using gasPrice (200% of network to match "Cao" option):', txParams.gasPrice);
+                    } catch (gasPriceError) {
+                        // Dùng gasPrice rất cao (100 gwei) để match với option "Cao"
+                        txParams.gasPrice = web3.utils.toWei('100', 'gwei');
+                        console.log('Using default gasPrice: 100 gwei (very high to match "Cao" option)');
+                    }
+                }
+
+                // Send transaction với txParams (giống như sell-item.html)
+                const tx = await tokenContract.methods.approve(marketplaceAddress, approvalAmount).send(txParams);
 
                 showStatus(`✅ Đã approve token! Transaction: ${tx.transactionHash}`, 'success');
                 document.getElementById('buyBtn').disabled = false;
@@ -477,11 +689,46 @@
 
             } catch (error) {
                 console.error('Error approving token:', error);
-                if (error.message && error.message.includes('user rejected')) {
-                    showStatus('❌ Bạn đã từ chối giao dịch approve', 'error');
-                } else {
-                    showStatus(`❌ Lỗi approve: ${error.message}`, 'error');
+                console.error('Error details:', {
+                    message: error.message,
+                    reason: error.reason,
+                    data: error.data,
+                    code: error.code,
+                    stack: error.stack
+                });
+                
+                let errorMessage = 'Lỗi không xác định';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.reason) {
+                    errorMessage = error.reason;
+                } else if (error.data) {
+                    if (error.data.message) {
+                        errorMessage = error.data.message;
+                    } else if (typeof error.data === 'string') {
+                        errorMessage = error.data;
+                    }
                 }
+
+                // Check for specific error types
+                if (errorMessage.includes('user rejected') || errorMessage.includes('User denied') || error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối giao dịch approve', 'error');
+                } else if (errorMessage.includes('Internal JSON-RPC error') || error.code === -32603) {
+                    // Internal JSON-RPC error có thể do:
+                    // 1. Gas limit quá thấp
+                    // 2. Transaction revert
+                    // 3. Network issue
+                    showStatus('❌ Lỗi RPC: Có thể do gas limit quá thấp hoặc transaction bị revert. Thử approve với giá trị nhỏ hơn hoặc kiểm tra lại contract!', 'error');
+                    console.error('RPC Error - có thể thử approve với giá trị nhỏ hơn hoặc tăng gas limit');
+                } else if (errorMessage.includes('execution reverted')) {
+                    showStatus('❌ Transaction bị revert. Có thể do contract không hợp lệ, không đủ balance, hoặc có validation trong contract.', 'error');
+                } else if (error.code === -32000) {
+                    showStatus('❌ Lỗi RPC: Transaction có thể bị reject bởi node. Thử lại sau hoặc kiểm tra network.', 'error');
+                } else {
+                    showStatus(`❌ Lỗi approve: ${errorMessage}`, 'error');
+                }
+                
                 document.getElementById('approveBtn').disabled = false;
                 document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
             }
@@ -499,9 +746,69 @@
                 document.getElementById('buyBtn').disabled = true;
                 document.getElementById('buyBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
 
-                const tx = await marketplaceContract.methods.buyItem(tokenId).send({
+                // Estimate gas cho buyItem transaction
+                let gasEstimate;
+                try {
+                    gasEstimate = await marketplaceContract.methods.buyItem(tokenId).estimateGas({
                     from: userAccount
                 });
+                    // Thêm 30% buffer và đảm bảo tối thiểu 100000
+                    gasEstimate = Math.max(Math.floor(gasEstimate * 1.3), 100000);
+                    console.log('Gas estimate for buyItem:', gasEstimate);
+                } catch (estimateError) {
+                    console.warn('Could not estimate gas, using default:', estimateError);
+                    gasEstimate = 200000; // Default gas limit cho buyItem
+                }
+
+                // Prepare transaction parameters với gas price/fee cao (giống như approve)
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                // Try to use EIP-1559 gas pricing với priority fee cao hơn để match option "Cao" trong MetaMask
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    let baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    
+                    // Nếu baseFee = 0 hoặc quá thấp, dùng network gasPrice làm base
+                    const baseFeeBigInt = BigInt(baseFee.toString());
+                    if (baseFeeBigInt === BigInt(0)) {
+                        baseFee = await web3.eth.getGasPrice();
+                        console.log('Base fee is 0, using network gasPrice as base:', baseFee);
+                    }
+                    
+                    // Set priority fee cao hơn nhiều (30 gwei) để match với option "Cao" trong MetaMask
+                    const maxPriorityFeePerGas = web3.utils.toWei('30', 'gwei');
+                    // Dùng BigInt thay vì toBN (Web3.js v4+)
+                    const baseFeeBigInt2 = BigInt(baseFee.toString());
+                    const maxPriorityBigInt = BigInt(maxPriorityFeePerGas.toString());
+                    // Set maxFeePerGas = baseFee * 5 + priorityFee (cao hơn nhiều để match option "Cao")
+                    const maxFeePerGas = (baseFeeBigInt2 * BigInt(5) + maxPriorityBigInt).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                    console.log('Using EIP-1559 gas pricing for buyItem (high priority to match "Cao" option):', { 
+                        maxFeePerGas, 
+                        maxPriorityFeePerGas,
+                        baseFee: baseFee.toString()
+                    });
+                } catch (eip1559Error) {
+                    // Fallback to gasPrice với giá cao hơn nhiều
+                    try {
+                        const networkGasPrice = await web3.eth.getGasPrice();
+                        // Tăng gasPrice lên 200% để đảm bảo match với option "Cao"
+                        const networkGasPriceBigInt = BigInt(networkGasPrice.toString());
+                        txParams.gasPrice = (networkGasPriceBigInt * BigInt(200) / BigInt(100)).toString();
+                        console.log('Using gasPrice for buyItem (200% of network to match "Cao" option):', txParams.gasPrice);
+                    } catch (gasPriceError) {
+                        // Dùng gasPrice rất cao (100 gwei) để match với option "Cao"
+                        txParams.gasPrice = web3.utils.toWei('100', 'gwei');
+                        console.log('Using default gasPrice for buyItem: 100 gwei (very high to match "Cao" option)');
+                    }
+                }
+
+                // Send buyItem transaction với txParams (có gas price/fee cao)
+                const tx = await marketplaceContract.methods.buyItem(tokenId).send(txParams);
 
                 showStatus(`✅ Đã mua item thành công! Transaction: ${tx.transactionHash}`, 'success');
                 document.getElementById('buyBtn').innerHTML = '✅ Đã Mua';

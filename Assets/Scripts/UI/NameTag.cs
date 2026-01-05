@@ -6,14 +6,6 @@ public class NameTag : MonoBehaviour
     public TMP_Text nameText;
     public Transform target;
 
-    void LateUpdate()
-    {
-        if (target.localScale.x < 0)
-            transform.localScale = new Vector3(-1, 1, 1);
-        else
-            transform.localScale = new Vector3(1, 1, 1);
-    }
-
     public void SetName(string username)
     {
         if (nameText == null)

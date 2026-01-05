@@ -14,9 +14,15 @@ public class MarketplaceUI : MonoBehaviour
     [SerializeField] private ScrollRect scrollView; // ScrollView để hiển thị items
     [SerializeField] private Transform contentContainer; // Container trong ScrollView để chứa item slots
     [SerializeField] private GameObject marketplaceSlotPrefab; // Prefab cho mỗi marketplace item slot
-    [SerializeField] private ItemInfoPanel itemInfoPanel; // Panel hiển thị thông tin item (dùng chung)
+    [SerializeField] private MarketplaceItemInfoPanel marketplaceItemInfoPanel; // Panel hiển thị thông tin item trong marketplace
     [SerializeField] private Button refreshButton; // Button để refresh marketplace
     [SerializeField] private TextMeshProUGUI statusText; // Text hiển thị trạng thái
+    
+    [Header("Game Token UI")]
+    [SerializeField] private GameObject gameTokenPanel; // Panel hiển thị game token balance
+    [SerializeField] private TextMeshProUGUI gameTokenBalanceText; // Text hiển thị số dư token
+    [SerializeField] private Button refreshTokenBalanceButton; // Button để refresh token balance
+    [SerializeField] private TextMeshProUGUI tokenStatusText; // Text hiển thị trạng thái token (loading, error, etc.)
     
     private Dictionary<string, GameObject> marketplaceSlotInstances = new Dictionary<string, GameObject>(); // Key: tokenId
 
@@ -41,10 +47,10 @@ public class MarketplaceUI : MonoBehaviour
             marketplacePanel.SetActive(false);
         }
 
-        // Tự động tìm ItemInfoPanel nếu chưa được assign
-        if (itemInfoPanel == null)
+        // Tự động tìm MarketplaceItemInfoPanel nếu chưa được assign
+        if (marketplaceItemInfoPanel == null)
         {
-            itemInfoPanel = FindAnyObjectByType<ItemInfoPanel>();
+            marketplaceItemInfoPanel = FindAnyObjectByType<MarketplaceItemInfoPanel>();
         }
 
         // Setup refresh button
@@ -53,6 +59,9 @@ public class MarketplaceUI : MonoBehaviour
             refreshButton.onClick.RemoveAllListeners();
             refreshButton.onClick.AddListener(OnRefreshButtonClicked);
         }
+
+        // Setup game token UI
+        SetupGameTokenUI();
 
         // Đăng ký event từ MarketplaceDataManager
         StartCoroutine(WaitForMarketplaceDataManager());
@@ -78,6 +87,11 @@ public class MarketplaceUI : MonoBehaviour
         if (MarketplaceDataManager.Instance != null)
         {
             MarketplaceDataManager.Instance.OnMarketplaceDataRefreshed -= OnMarketplaceDataRefreshed;
+        }
+
+        if (GameTokenBalanceManager.Instance != null)
+        {
+            GameTokenBalanceManager.Instance.OnBalanceUpdated -= OnTokenBalanceUpdated;
         }
     }
 
@@ -136,6 +150,17 @@ public class MarketplaceUI : MonoBehaviour
         
         // Tự động refresh khi mở
         RefreshMarketplaceUI();
+        
+        // Tự động refresh token balance khi mở marketplace lần đầu (nếu chưa có balance)
+        if (GameTokenBalanceManager.Instance != null && GameTokenBalanceManager.Instance.GetCurrentBalance() == 0f)
+        {
+            // Chỉ refresh nếu chưa có balance (lần đầu mở)
+            string walletAddress = InventoryManager.Instance?.GetWalletAddress();
+            if (!string.IsNullOrEmpty(walletAddress))
+            {
+                GameTokenBalanceManager.Instance.RefreshBalance();
+            }
+        }
     }
 
     /// <summary>
@@ -292,22 +317,153 @@ public class MarketplaceUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Hiển thị thông tin item trong info panel (dùng chung với InventoryUI)
+    /// Hiển thị thông tin item trong marketplace info panel
     /// </summary>
-    public void ShowItemInfo(ItemData itemData, string tokenId, string price)
+    public void ShowItemInfo(ItemData itemData, string tokenId, string price, string sellerAddress = "")
     {
-        if (itemInfoPanel != null)
+        if (marketplaceItemInfoPanel != null)
         {
-            // Pass thông tin marketplace item
-            // TODO: Có thể cần tạo overload method riêng cho marketplace items
-            itemInfoPanel.ShowItemInfo(itemData, isFromWallet: false, isFromEquipping: false);
-            
-            // TODO: Có thể cần thêm logic để hiển thị nút Buy trong ItemInfoPanel
+            marketplaceItemInfoPanel.ShowItemInfo(itemData, tokenId, price, sellerAddress);
         }
         else
         {
-            Debug.LogWarning("[MarketplaceUI] ItemInfoPanel is not assigned!");
+            Debug.LogWarning("[MarketplaceUI] MarketplaceItemInfoPanel is not assigned!");
         }
+    }
+
+    /// <summary>
+    /// Setup game token UI components
+    /// </summary>
+    private void SetupGameTokenUI()
+    {
+        // Tự động tìm các component nếu chưa được assign
+        if (gameTokenPanel == null)
+        {
+            // Tìm trong marketplace panel
+            if (marketplacePanel != null)
+            {
+                Transform tokenPanelTransform = marketplacePanel.transform.Find("GameTokenPanel");
+                if (tokenPanelTransform != null)
+                {
+                    gameTokenPanel = tokenPanelTransform.gameObject;
+                }
+            }
+        }
+
+        if (gameTokenBalanceText == null && gameTokenPanel != null)
+        {
+            Transform balanceTextTransform = gameTokenPanel.transform.Find("BalanceText");
+            if (balanceTextTransform != null)
+            {
+                gameTokenBalanceText = balanceTextTransform.GetComponent<TextMeshProUGUI>();
+            }
+        }
+
+        if (refreshTokenBalanceButton == null && gameTokenPanel != null)
+        {
+            Transform refreshButtonTransform = gameTokenPanel.transform.Find("RefreshButton");
+            if (refreshButtonTransform != null)
+            {
+                refreshTokenBalanceButton = refreshButtonTransform.GetComponent<Button>();
+            }
+        }
+
+        if (tokenStatusText == null && gameTokenPanel != null)
+        {
+            Transform statusTextTransform = gameTokenPanel.transform.Find("StatusText");
+            if (statusTextTransform != null)
+            {
+                tokenStatusText = statusTextTransform.GetComponent<TextMeshProUGUI>();
+            }
+        }
+
+        // Setup refresh button
+        if (refreshTokenBalanceButton != null)
+        {
+            refreshTokenBalanceButton.onClick.RemoveAllListeners();
+            refreshTokenBalanceButton.onClick.AddListener(OnRefreshTokenBalanceClicked);
+        }
+
+        // Đăng ký event từ GameTokenBalanceManager
+        StartCoroutine(WaitForGameTokenBalanceManager());
+    }
+
+    /// <summary>
+    /// Đợi GameTokenBalanceManager được khởi tạo và đăng ký events
+    /// </summary>
+    private IEnumerator WaitForGameTokenBalanceManager()
+    {
+        while (GameTokenBalanceManager.Instance == null)
+        {
+            yield return null;
+        }
+
+        // Đăng ký events
+        GameTokenBalanceManager.Instance.OnBalanceUpdated += OnTokenBalanceUpdated;
+
+        // Load balance hiện tại nếu đã có
+        UpdateTokenBalanceUI(GameTokenBalanceManager.Instance.GetCurrentBalance());
+    }
+
+    /// <summary>
+    /// Xử lý khi click refresh token balance button
+    /// </summary>
+    private void OnRefreshTokenBalanceClicked()
+    {
+        if (GameTokenBalanceManager.Instance == null)
+        {
+            UpdateTokenStatusText("GameTokenBalanceManager chưa được khởi tạo!");
+            return;
+        }
+
+        if (GameTokenBalanceManager.Instance.IsRefreshing())
+        {
+            UpdateTokenStatusText("Đang refresh, vui lòng đợi...");
+            return;
+        }
+
+        // Kiểm tra wallet address
+        string walletAddress = InventoryManager.Instance?.GetWalletAddress();
+        if (string.IsNullOrEmpty(walletAddress))
+        {
+            UpdateTokenStatusText("Chưa liên kết ví! Vui lòng liên kết ví trước.");
+            return;
+        }
+
+        UpdateTokenStatusText("Đang tải số dư token...");
+        GameTokenBalanceManager.Instance.RefreshBalance();
+    }
+
+    /// <summary>
+    /// Callback khi token balance được update
+    /// </summary>
+    private void OnTokenBalanceUpdated(float balance)
+    {
+        UpdateTokenBalanceUI(balance);
+        UpdateTokenStatusText("Đã update số dư từ ví");
+    }
+
+    /// <summary>
+    /// Update UI hiển thị token balance
+    /// </summary>
+    private void UpdateTokenBalanceUI(float balance)
+    {
+        if (gameTokenBalanceText != null)
+        {
+            gameTokenBalanceText.text = $"{balance:F2}";
+        }
+    }
+
+    /// <summary>
+    /// Update status text cho token
+    /// </summary>
+    private void UpdateTokenStatusText(string message)
+    {
+        if (tokenStatusText != null)
+        {
+            tokenStatusText.text = message;
+        }
+        Debug.Log($"[MarketplaceUI] Token Status: {message}");
     }
 }
 
@@ -393,10 +549,12 @@ public class MarketplaceSlotUI : MonoBehaviour, UnityEngine.EventSystems.IPointe
             iconImage.enabled = false;
         }
 
-        // Setup item name
-        if (itemNameText != null && itemData != null)
+        // Không hiển thị tên trong slot (để tiết kiệm không gian)
+        // Tên sẽ hiển thị trong MarketplaceItemInfoPanel khi click vào
+        if (itemNameText != null)
         {
-            itemNameText.text = itemData.itemName ?? "Unknown Item";
+            itemNameText.text = ""; // Xóa tên
+            itemNameText.gameObject.SetActive(false); // Ẩn text component
         }
 
         // Setup price
@@ -419,7 +577,7 @@ public class MarketplaceSlotUI : MonoBehaviour, UnityEngine.EventSystems.IPointe
     {
         if (marketplaceUI != null && itemData != null)
         {
-            marketplaceUI.ShowItemInfo(itemData, tokenId, price);
+            marketplaceUI.ShowItemInfo(itemData, tokenId, price, sellerAddress);
         }
     }
 }

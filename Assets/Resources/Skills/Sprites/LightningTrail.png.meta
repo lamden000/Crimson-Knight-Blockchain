@@ -1,10 +1,19 @@
 fileFormatVersion: 2
-guid: 80c676cdec5b04b4a89ba8e175c4c9f5
+guid: 85b4178720f4683448a440d88a895350
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 337544412713340320
-    second: 2578_0
+      213: 2531813658957430213
+    second: LightningTrail_0
+  - first:
+      213: -6648000736695634175
+    second: LightningTrail_1
+  - first:
+      213: -7884424019892445707
+    second: LightningTrail_2
+  - first:
+      213: 6445927315113259225
+    second: LightningTrail_3
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,7 +55,7 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
@@ -139,13 +148,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: 2578_0
+      name: LightningTrail_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 36
-        height: 36
+        x: 2
+        y: 33
+        width: 229
+        height: 111
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +163,74 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 0ad42bfdad23fa400800000000000000
-      internalID: 337544412713340320
+      spriteID: 5cdb3a3db1fc22320800000000000000
+      internalID: 2531813658957430213
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LightningTrail_1
+      rect:
+        serializedVersion: 2
+        x: 173
+        y: 8
+        width: 21
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 107b8b67d8e8db3a0800000000000000
+      internalID: -6648000736695634175
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LightningTrail_2
+      rect:
+        serializedVersion: 2
+        x: 190
+        y: 21
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5fdd0cb9026e49290800000000000000
+      internalID: -7884424019892445707
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: LightningTrail_3
+      rect:
+        serializedVersion: 2
+        x: 168
+        y: 0
+        width: 48
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9d03059bdb8847950800000000000000
+      internalID: 6445927315113259225
       vertices: []
       indices: 
       edges: []
@@ -164,7 +239,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 5e97eb03825dee720800000000000000
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +249,10 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      2578_0: 337544412713340320
+      LightningTrail_0: 2531813658957430213
+      LightningTrail_1: -6648000736695634175
+      LightningTrail_2: -7884424019892445707
+      LightningTrail_3: 6445927315113259225
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

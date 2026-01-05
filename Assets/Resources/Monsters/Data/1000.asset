@@ -17,6 +17,6 @@ MonoBehaviour:
   moveSpeed: 150
   dropTable:
   - item: {fileID: 11400000, guid: 2304e9f62c7e214459d5ecffeac455b6, type: 2}
-    dropRate: 0.2
+    dropRate: 0.427
   - item: {fileID: 11400000, guid: 0658154da3e420b42bac76379e43ab29, type: 2}
     dropRate: 0.585
