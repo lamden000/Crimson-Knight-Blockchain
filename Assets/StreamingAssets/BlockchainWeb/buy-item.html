@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buy Item - Marketplace</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-box.info {
+            border-left-color: #3498db;
+            background: #eef;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .wallet-info {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        .item-info {
+            background: #fff9e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            border-color: #d0d0d0;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .network-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛒 Buy Item</h1>
+        <p class="subtitle">Mua NFT từ marketplace</p>
+
+        <div id="statusBox" class="status-box info">
+            <div class="status-text">Đang chờ kết nối MetaMask...</div>
+        </div>
+
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <strong>Địa chỉ ví:</strong>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="network-info" id="networkInfo"></div>
+        </div>
+
+        <div id="itemInfo" class="item-info" style="display: none;">
+            <strong>Thông tin Item:</strong>
+            <div style="margin-top: 10px;">
+                <div>Token ID: <strong id="tokenId">-</strong></div>
+                <div>Giá: <strong id="price">-</strong> GTK</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="marketplaceAddress">Marketplace Contract:</label>
+            <input type="text" id="marketplaceAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="tokenAddress">GameToken Contract:</label>
+            <input type="text" id="tokenAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <button id="connectBtn" onclick="connectWallet()">🔗 Kết nối MetaMask</button>
+        <button id="switchNetworkBtn" onclick="switchToAmoy()" disabled class="button-secondary" style="display: none;">🔄 Chuyển sang Polygon Amoy</button>
+        <button id="approveBtn" onclick="approveToken()" disabled>✅ Approve Token</button>
+        <button id="buyBtn" onclick="buyItem()" disabled>🛒 Buy Item</button>
+    </div>
+
+    <script>
+        let web3;
+        let userAccount;
+        let marketplaceContract;
+        let tokenContract;
+        let marketplaceAddress = '';
+        let tokenAddress = '';
+        let tokenId = '';
+        let price = '';
+
+        // ABI của Marketplace contract
+        const MARKETPLACE_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+                ],
+                "name": "buyItem",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        // ABI của ERC20 (approve, allowance, decimals)
+        const ERC20_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "spender", "type": "address"},
+                    {"internalType": "uint256", "name": "amount", "type": "uint256"}
+                ],
+                "name": "approve",
+                "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "owner", "type": "address"},
+                    {"internalType": "address", "name": "spender", "type": "address"}
+                ],
+                "name": "allowance",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "account", "type": "address"}
+                ],
+                "name": "balanceOf",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "decimals",
+                "outputs": [{"internalType": "uint8", "name": "", "type": "uint8"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // Lấy parameters từ URL
+        function getURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            
+            marketplaceAddress = params.get('marketplace') || '';
+            tokenAddress = params.get('token') || '';
+            tokenId = params.get('tokenId') || '';
+            price = params.get('price') || '';
+
+            if (marketplaceAddress) {
+                document.getElementById('marketplaceAddress').value = marketplaceAddress;
+            }
+            if (tokenAddress) {
+                document.getElementById('tokenAddress').value = tokenAddress;
+            }
+            if (tokenId) {
+                document.getElementById('tokenId').textContent = tokenId;
+                document.getElementById('itemInfo').style.display = 'block';
+            }
+            if (price) {
+                document.getElementById('price').textContent = price;
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.querySelector('.status-text').textContent = message;
+        }
+
+        // Kết nối MetaMask
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask chưa được cài đặt!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Revoke permissions trước để force popup chọn tài khoản
+                try {
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (e) {
+                            console.log('Cannot revoke permissions:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.log('wallet_getPermissions not supported:', e);
+                }
+
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+
+                userAccount = accounts[0];
+                web3 = new Web3(window.ethereum);
+
+                document.getElementById('walletAddress').textContent = userAccount;
+                document.getElementById('walletInfo').style.display = 'block';
+
+                const chainId = await web3.eth.getChainId();
+                const networkNames = {
+                    1: 'Ethereum Mainnet',
+                    80002: 'Polygon Amoy Testnet',
+                    137: 'Polygon Mainnet'
+                };
+                const networkName = networkNames[chainId] || `Chain ID: ${chainId}`;
+                document.getElementById('networkInfo').textContent = `Network: ${networkName}`;
+
+                await ensureAmoyNetwork();
+
+                if (!marketplaceAddress || !tokenAddress) {
+                    showStatus('⚠️ Contract addresses chưa được set từ game!', 'error');
+                    return;
+                }
+
+                // Validate addresses
+                if (!web3.utils.isAddress(marketplaceAddress)) {
+                    showStatus(`❌ Marketplace address không hợp lệ: ${marketplaceAddress}`, 'error');
+                    return;
+                }
+
+                if (!web3.utils.isAddress(tokenAddress)) {
+                    showStatus(`❌ Token address không hợp lệ: ${tokenAddress}`, 'error');
+                    return;
+                }
+
+                marketplaceAddress = web3.utils.toChecksumAddress(marketplaceAddress);
+                tokenAddress = web3.utils.toChecksumAddress(tokenAddress);
+
+                // Debug: Log addresses
+                console.log('Marketplace Address:', marketplaceAddress);
+                console.log('Token Address:', tokenAddress);
+                console.log('Token ID:', tokenId);
+                console.log('Price:', price);
+
+                marketplaceContract = new web3.eth.Contract(MARKETPLACE_ABI, marketplaceAddress);
+                tokenContract = new web3.eth.Contract(ERC20_ABI, tokenAddress);
+
+                // Check token balance
+                const balance = await tokenContract.methods.balanceOf(userAccount).call();
+                const priceInWei = web3.utils.toWei(price || '0', 'ether');
+                // Convert to BigInt for comparison (Web3.js v4+ không còn toBN)
+                const balanceBigInt = BigInt(balance.toString());
+                const priceBigInt = BigInt(priceInWei.toString());
+                if (balanceBigInt < priceBigInt) {
+                    showStatus('❌ Không đủ token để mua!', 'error');
+                }
+
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
+                document.getElementById('approveBtn').disabled = false;
+
+                const currentChainId = await web3.eth.getChainId();
+                if (currentChainId != 80002) {
+                    document.getElementById('switchNetworkBtn').style.display = 'block';
+                    document.getElementById('switchNetworkBtn').disabled = false;
+                } else {
+                    showStatus('✅ Đã kết nối!', 'success');
+                }
+
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                if (error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
+                } else {
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Chuyển sang Polygon Amoy
+        async function switchToAmoy() {
+            await ensureAmoyNetwork();
+        }
+
+        async function ensureAmoyNetwork() {
+            try {
+                const chainId = await web3.eth.getChainId();
+                if (chainId == 80002) return true;
+
+                showStatus('⏳ Đang chuyển sang Polygon Amoy...', 'info');
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x13882' }],
+                });
+                setTimeout(() => location.reload(), 1500);
+                return true;
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x13882',
+                            chainName: 'Polygon Amoy Testnet',
+                            nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+                            rpcUrls: ['https://rpc-amoy.polygon.technology'],
+                            blockExplorerUrls: ['https://www.oklink.com/amoy']
+                        }],
+                    });
+                    setTimeout(() => location.reload(), 1500);
+                    return true;
+                }
+                showStatus('❌ Không thể chuyển network.', 'error');
+                return false;
+            }
+        }
+
+        // Approve Token
+        async function approveToken() {
+            try {
+                if (!tokenContract || !userAccount || !price) {
+                    showStatus('❌ Vui lòng kết nối MetaMask và có giá!', 'error');
+                    return;
+                }
+
+                // Validate contract addresses
+                if (!web3.utils.isAddress(tokenAddress)) {
+                    showStatus('❌ Token contract address không hợp lệ!', 'error');
+                    return;
+                }
+
+                if (!web3.utils.isAddress(marketplaceAddress)) {
+                    showStatus('❌ Marketplace contract address không hợp lệ!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang approve token...', 'info');
+                document.getElementById('approveBtn').disabled = true;
+                document.getElementById('approveBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Kiểm tra decimals của token để convert price đúng
+                let tokenDecimals = 18; // Default là 18 như ether
+                try {
+                    const decimals = await tokenContract.methods.decimals().call();
+                    tokenDecimals = parseInt(decimals);
+                    console.log('Token decimals:', tokenDecimals);
+                } catch (e) {
+                    console.warn('Cannot get token decimals, assuming 18:', e);
+                }
+
+                // Convert price sang đúng format dựa trên decimals
+                let priceInWei;
+                try {
+                    // Convert price (ví dụ: "5.00") sang wei với đúng decimals
+                    // Nếu decimals = 18: "5.00" -> 5000000000000000000
+                    // Nếu decimals = 0: "5.00" -> 5
+                    if (tokenDecimals === 18) {
+                        priceInWei = web3.utils.toWei(price, 'ether');
+                    } else {
+                        // Convert với decimals khác
+                        const priceFloat = parseFloat(price);
+                        const multiplier = Math.pow(10, tokenDecimals);
+                        priceInWei = Math.floor(priceFloat * multiplier).toString();
+                    }
+                    console.log('Price:', price, '-> Price in token units (decimals=' + tokenDecimals + '):', priceInWei);
+                } catch (e) {
+                    // Nếu lỗi, thử dùng giá trị thực (có thể price đã là giá trị đúng)
+                    console.warn('Cannot convert price, using raw value:', e);
+                    priceInWei = price;
+                }
+
+                // Check if contract has approve function
+                try {
+                    const code = await web3.eth.getCode(tokenAddress);
+                    if (code === '0x' || code === '0x0') {
+                        showStatus('❌ Token contract không tồn tại tại địa chỉ này!', 'error');
+                        document.getElementById('approveBtn').disabled = false;
+                        document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Cannot check contract code:', e);
+                }
+
+                // Check if already approved
+                let allowance;
+                try {
+                    allowance = await tokenContract.methods.allowance(userAccount, marketplaceAddress).call();
+                    console.log('Current allowance:', allowance.toString());
+                } catch (e) {
+                    showStatus('❌ Không thể kiểm tra allowance. Contract có thể không hợp lệ.', 'error');
+                    console.error('Error checking allowance:', e);
+                    document.getElementById('approveBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+                    return;
+                }
+
+                // Convert to BigInt for comparison (Web3.js v4+ không còn toBN)
+                const allowanceBigInt = BigInt(allowance.toString());
+                const priceBigInt = BigInt(priceInWei.toString());
+                console.log('Allowance BigInt:', allowanceBigInt.toString(), 'Price BigInt:', priceBigInt.toString());
+                
+                if (allowanceBigInt >= priceBigInt) {
+                    showStatus('✅ Token đã được approve đủ!', 'success');
+                    document.getElementById('buyBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
+                    return;
+                }
+
+                 // Approve với số lượng đúng price (không buffer để đơn giản và tránh nhiều popup)
+                 // Chỉ gửi 1 transaction duy nhất để tránh nonce issue và nhiều popup MetaMask
+                 const approvalAmount = priceBigInt.toString();
+                 console.log('Will approve exact price amount (no buffer):', approvalAmount);
+
+                showStatus('⏳ Đang gửi transaction approve...', 'info');
+                console.log('Approving:', {
+                    spender: marketplaceAddress,
+                    amount: approvalAmount,
+                    from: userAccount
+                });
+                
+                // Estimate gas trước để kiểm tra
+                let gasEstimate;
+                try {
+                    gasEstimate = await tokenContract.methods.approve(marketplaceAddress, approvalAmount).estimateGas({
+                        from: userAccount
+                    });
+                    console.log('Gas estimate:', gasEstimate.toString());
+                    // Tăng gas limit thêm 30% để an toàn
+                    gasEstimate = Math.floor(parseInt(gasEstimate.toString()) * 1.3);
+                    // Đảm bảo tối thiểu 35000 (dựa trên Remix: ~30000)
+                    if (gasEstimate < 35000) {
+                        gasEstimate = 35000;
+                    }
+                    console.log('Gas limit (with 30% buffer, min 35000):', gasEstimate);
+                } catch (e) {
+                    console.warn('Cannot estimate gas, using default:', e);
+                    // Nếu estimate gas lỗi, dùng giá trị an toàn
+                    gasEstimate = 50000;
+                    console.log('Using default gas limit:', gasEstimate);
+                }
+
+                // Kiểm tra nonce để đảm bảo không có transaction pending
+                try {
+                    const currentNonce = await web3.eth.getTransactionCount(userAccount, 'pending');
+                    const latestNonce = await web3.eth.getTransactionCount(userAccount, 'latest');
+                    console.log('Current nonce (pending):', currentNonce, 'Latest nonce:', latestNonce);
+                    if (currentNonce > latestNonce) {
+                        console.warn('⚠️ Có transaction đang pending, có thể gây nonce conflict');
+                    }
+                } catch (e) {
+                    console.warn('Cannot check nonce:', e);
+                }
+
+                // Kiểm tra transaction có bị revert không bằng cách call trước (không tốn gas)
+                try {
+                    console.log('Checking if transaction will succeed (dry run)...');
+                    await tokenContract.methods.approve(marketplaceAddress, approvalAmount).call({
+                        from: userAccount
+                    });
+                    console.log('✅ Call successful - transaction should work');
+                } catch (callError) {
+                    console.error('❌ Call failed - transaction will revert:', callError);
+                    // Nếu call fail, transaction sẽ revert
+                    let revertReason = 'Unknown reason';
+                    if (callError.reason) {
+                        revertReason = callError.reason;
+                    } else if (callError.message) {
+                        revertReason = callError.message;
+                    }
+                    showStatus(`❌ Transaction sẽ bị revert: ${revertReason}. Kiểm tra lại contract hoặc thử với giá trị nhỏ hơn.`, 'error');
+                    document.getElementById('approveBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+                    return; // Dừng lại, không gửi transaction
+                }
+
+                // Chỉ gửi 1 transaction duy nhất - áp dụng cách làm từ sell-item.html (đã thành công)
+                console.log('Sending approve transaction with explicit gas settings...');
+                
+                // Prepare transaction parameters giống như sell-item.html
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                // Try to use EIP-1559 gas pricing với priority fee cao hơn để match option "Cao" trong MetaMask
+                // Từ MetaMask, option "Cao" = 0.00268219 POL, "Website" = 0.00026066 POL (thấp hơn ~10 lần)
+                // Khi baseFee = 0 GWEI (như trong hình), cần set priority fee và maxFeePerGas cao hơn nhiều
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    let baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    
+                    // Nếu baseFee = 0 hoặc quá thấp, dùng network gasPrice làm base
+                    const baseFeeBigInt = BigInt(baseFee.toString());
+                    if (baseFeeBigInt === BigInt(0)) {
+                        baseFee = await web3.eth.getGasPrice();
+                        console.log('Base fee is 0, using network gasPrice as base:', baseFee);
+                    }
+                    
+                    // Set priority fee cao hơn nhiều (30 gwei) để match với option "Cao" trong MetaMask
+                    // Option "Cao" có priority fee cao hơn "Website" rất nhiều
+                    const maxPriorityFeePerGas = web3.utils.toWei('30', 'gwei');
+                    // Dùng BigInt thay vì toBN (Web3.js v4+)
+                    const baseFeeBigInt2 = BigInt(baseFee.toString());
+                    const maxPriorityBigInt = BigInt(maxPriorityFeePerGas.toString());
+                    // Set maxFeePerGas = baseFee * 5 + priorityFee (cao hơn nhiều để match option "Cao")
+                    const maxFeePerGas = (baseFeeBigInt2 * BigInt(5) + maxPriorityBigInt).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                    console.log('Using EIP-1559 gas pricing (high priority to match "Cao" option):', { 
+                        maxFeePerGas, 
+                        maxPriorityFeePerGas,
+                        baseFee: baseFee.toString()
+                    });
+                } catch (eip1559Error) {
+                    // Fallback to gasPrice với giá cao hơn nhiều
+                    try {
+                        const networkGasPrice = await web3.eth.getGasPrice();
+                        // Tăng gasPrice lên 200% để đảm bảo match với option "Cao"
+                        const networkGasPriceBigInt = BigInt(networkGasPrice.toString());
+                        txParams.gasPrice = (networkGasPriceBigInt * BigInt(200) / BigInt(100)).toString();
+                        console.log('Using gasPrice (200% of network to match "Cao" option):', txParams.gasPrice);
+                    } catch (gasPriceError) {
+                        // Dùng gasPrice rất cao (100 gwei) để match với option "Cao"
+                        txParams.gasPrice = web3.utils.toWei('100', 'gwei');
+                        console.log('Using default gasPrice: 100 gwei (very high to match "Cao" option)');
+                    }
+                }
+
+                // Send transaction với txParams (giống như sell-item.html)
+                const tx = await tokenContract.methods.approve(marketplaceAddress, approvalAmount).send(txParams);
+
+                showStatus(`✅ Đã approve token! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('buyBtn').disabled = false;
+                document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
+
+            } catch (error) {
+                console.error('Error approving token:', error);
+                console.error('Error details:', {
+                    message: error.message,
+                    reason: error.reason,
+                    data: error.data,
+                    code: error.code,
+                    stack: error.stack
+                });
+                
+                let errorMessage = 'Lỗi không xác định';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.reason) {
+                    errorMessage = error.reason;
+                } else if (error.data) {
+                    if (error.data.message) {
+                        errorMessage = error.data.message;
+                    } else if (typeof error.data === 'string') {
+                        errorMessage = error.data;
+                    }
+                }
+
+                // Check for specific error types
+                if (errorMessage.includes('user rejected') || errorMessage.includes('User denied') || error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối giao dịch approve', 'error');
+                } else if (errorMessage.includes('Internal JSON-RPC error') || error.code === -32603) {
+                    // Internal JSON-RPC error có thể do:
+                    // 1. Gas limit quá thấp
+                    // 2. Transaction revert
+                    // 3. Network issue
+                    showStatus('❌ Lỗi RPC: Có thể do gas limit quá thấp hoặc transaction bị revert. Thử approve với giá trị nhỏ hơn hoặc kiểm tra lại contract!', 'error');
+                    console.error('RPC Error - có thể thử approve với giá trị nhỏ hơn hoặc tăng gas limit');
+                } else if (errorMessage.includes('execution reverted')) {
+                    showStatus('❌ Transaction bị revert. Có thể do contract không hợp lệ, không đủ balance, hoặc có validation trong contract.', 'error');
+                } else if (error.code === -32000) {
+                    showStatus('❌ Lỗi RPC: Transaction có thể bị reject bởi node. Thử lại sau hoặc kiểm tra network.', 'error');
+                } else {
+                    showStatus(`❌ Lỗi approve: ${errorMessage}`, 'error');
+                }
+                
+                document.getElementById('approveBtn').disabled = false;
+                document.getElementById('approveBtn').innerHTML = '✅ Approve Token';
+            }
+        }
+
+        // Buy item
+        async function buyItem() {
+            try {
+                if (!marketplaceContract || !userAccount || !tokenId) {
+                    showStatus('❌ Thiếu thông tin!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang mua item...', 'info');
+                document.getElementById('buyBtn').disabled = true;
+                document.getElementById('buyBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Estimate gas cho buyItem transaction
+                let gasEstimate;
+                try {
+                    gasEstimate = await marketplaceContract.methods.buyItem(tokenId).estimateGas({
+                    from: userAccount
+                });
+                    // Thêm 30% buffer và đảm bảo tối thiểu 100000
+                    gasEstimate = Math.max(Math.floor(gasEstimate * 1.3), 100000);
+                    console.log('Gas estimate for buyItem:', gasEstimate);
+                } catch (estimateError) {
+                    console.warn('Could not estimate gas, using default:', estimateError);
+                    gasEstimate = 200000; // Default gas limit cho buyItem
+                }
+
+                // Prepare transaction parameters với gas price/fee cao (giống như approve)
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                // Try to use EIP-1559 gas pricing với priority fee cao hơn để match option "Cao" trong MetaMask
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    let baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    
+                    // Nếu baseFee = 0 hoặc quá thấp, dùng network gasPrice làm base
+                    const baseFeeBigInt = BigInt(baseFee.toString());
+                    if (baseFeeBigInt === BigInt(0)) {
+                        baseFee = await web3.eth.getGasPrice();
+                        console.log('Base fee is 0, using network gasPrice as base:', baseFee);
+                    }
+                    
+                    // Set priority fee cao hơn nhiều (30 gwei) để match với option "Cao" trong MetaMask
+                    const maxPriorityFeePerGas = web3.utils.toWei('30', 'gwei');
+                    // Dùng BigInt thay vì toBN (Web3.js v4+)
+                    const baseFeeBigInt2 = BigInt(baseFee.toString());
+                    const maxPriorityBigInt = BigInt(maxPriorityFeePerGas.toString());
+                    // Set maxFeePerGas = baseFee * 5 + priorityFee (cao hơn nhiều để match option "Cao")
+                    const maxFeePerGas = (baseFeeBigInt2 * BigInt(5) + maxPriorityBigInt).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                    console.log('Using EIP-1559 gas pricing for buyItem (high priority to match "Cao" option):', { 
+                        maxFeePerGas, 
+                        maxPriorityFeePerGas,
+                        baseFee: baseFee.toString()
+                    });
+                } catch (eip1559Error) {
+                    // Fallback to gasPrice với giá cao hơn nhiều
+                    try {
+                        const networkGasPrice = await web3.eth.getGasPrice();
+                        // Tăng gasPrice lên 200% để đảm bảo match với option "Cao"
+                        const networkGasPriceBigInt = BigInt(networkGasPrice.toString());
+                        txParams.gasPrice = (networkGasPriceBigInt * BigInt(200) / BigInt(100)).toString();
+                        console.log('Using gasPrice for buyItem (200% of network to match "Cao" option):', txParams.gasPrice);
+                    } catch (gasPriceError) {
+                        // Dùng gasPrice rất cao (100 gwei) để match với option "Cao"
+                        txParams.gasPrice = web3.utils.toWei('100', 'gwei');
+                        console.log('Using default gasPrice for buyItem: 100 gwei (very high to match "Cao" option)');
+                    }
+                }
+
+                // Send buyItem transaction với txParams (có gas price/fee cao)
+                const tx = await marketplaceContract.methods.buyItem(tokenId).send(txParams);
+
+                showStatus(`✅ Đã mua item thành công! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('buyBtn').innerHTML = '✅ Đã Mua';
+
+            } catch (error) {
+                console.error('Error buying item:', error);
+                if (error.message && error.message.includes('user rejected')) {
+                    showStatus('❌ Bạn đã từ chối giao dịch mua', 'error');
+                } else {
+                    showStatus(`❌ Lỗi mua: ${error.message}`, 'error');
+                }
+                document.getElementById('buyBtn').disabled = false;
+                document.getElementById('buyBtn').innerHTML = '🛒 Buy Item';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            getURLParams();
+            if (window.location.protocol === 'file:') {
+                showStatus('⚠️ Đang chạy từ file:// - Vui lòng chạy qua HTTP server!', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
+

@@ -4,54 +4,69 @@ using UnityEditor.Callbacks;
 using System.IO;
 
 /// <summary>
-/// Editor script để tự động copy file HTML từ WithdrawWeb vào build folder sau khi build
+/// Editor script để tự động copy file HTML từ BlockchainWeb vào StreamingAssets và build folder sau khi build
 /// </summary>
 public class CopyWithdrawWebToBuild
 {
     [PostProcessBuild(1)]
     public static void OnPostprocessBuild(BuildTarget target, string pathToBuiltProject)
     {
-        // Lấy đường dẫn tới thư mục build
-        string buildFolder = Path.GetDirectoryName(pathToBuiltProject);
-        
-        // Đường dẫn tới thư mục WithdrawWeb trong Assets
-        string sourceFolder = Path.Combine(Application.dataPath, "WithdrawWeb");
-        
-        // Đường dẫn tới thư mục WithdrawWeb trong build folder
-        string destFolder = Path.Combine(buildFolder, "WithdrawWeb");
+        // Đường dẫn tới thư mục BlockchainWeb trong Assets
+        string sourceFolder = Path.Combine(Application.dataPath, "BlockchainWeb");
         
         if (!Directory.Exists(sourceFolder))
         {
-            Debug.LogWarning($"[CopyWithdrawWebToBuild] Không tìm thấy thư mục WithdrawWeb tại: {sourceFolder}");
+            Debug.LogWarning($"[CopyWithdrawWebToBuild] Không tìm thấy thư mục BlockchainWeb tại: {sourceFolder}");
             return;
         }
-        
-        // Tạo thư mục đích nếu chưa có
+
+        // 1. Copy vào StreamingAssets (để có thể truy cập từ runtime)
+        string streamingAssetsDest = Path.Combine(Application.streamingAssetsPath, "BlockchainWeb");
+        CopyFolder(sourceFolder, streamingAssetsDest, "StreamingAssets");
+
+        // 2. Copy vào build folder root (để có thể chạy HTTP server)
+        string buildFolder = Path.GetDirectoryName(pathToBuiltProject);
+        string buildDest = Path.Combine(buildFolder, "BlockchainWeb");
+        CopyFolder(sourceFolder, buildDest, "Build Folder");
+    }
+
+    /// <summary>
+    /// Copy toàn bộ folder và file HTML
+    /// </summary>
+    private static void CopyFolder(string sourceFolder, string destFolder, string locationName)
+    {
         if (!Directory.Exists(destFolder))
         {
             Directory.CreateDirectory(destFolder);
-            Debug.Log($"[CopyWithdrawWebToBuild] Đã tạo thư mục: {destFolder}");
+            Debug.Log($"[CopyWithdrawWebToBuild] Đã tạo thư mục tại {locationName}: {destFolder}");
         }
-        
-        // Copy tất cả file HTML
-        string[] htmlFiles = { "index.html", "withdraw-coin.html", "link-wallet.html" };
-        foreach (string fileName in htmlFiles)
+
+        // Copy tất cả file HTML và các file liên quan
+        string[] filesToCopy = Directory.GetFiles(sourceFolder, "*.*", SearchOption.TopDirectoryOnly);
+        int copiedCount = 0;
+
+        foreach (string sourceFile in filesToCopy)
         {
-            string sourceFile = Path.Combine(sourceFolder, fileName);
+            // Bỏ qua file .meta
+            if (sourceFile.EndsWith(".meta"))
+                continue;
+
+            string fileName = Path.GetFileName(sourceFile);
             string destFile = Path.Combine(destFolder, fileName);
-            
-            if (File.Exists(sourceFile))
+
+            try
             {
                 File.Copy(sourceFile, destFile, true);
-                Debug.Log($"[CopyWithdrawWebToBuild] Đã copy {fileName} từ {sourceFile} tới {destFile}");
+                copiedCount++;
+                Debug.Log($"[CopyWithdrawWebToBuild] ✅ Đã copy {fileName} vào {locationName}");
             }
-            else
+            catch (System.Exception e)
             {
-                Debug.LogWarning($"[CopyWithdrawWebToBuild] Không tìm thấy file: {sourceFile}");
+                Debug.LogError($"[CopyWithdrawWebToBuild] ❌ Lỗi copy {fileName}: {e.Message}");
             }
         }
-        
-        Debug.Log($"[CopyWithdrawWebToBuild] Hoàn thành copy file HTML vào build folder: {destFolder}");
+
+        Debug.Log($"[CopyWithdrawWebToBuild] ✅ Hoàn thành copy {copiedCount} files vào {locationName}: {destFolder}");
     }
 }
 

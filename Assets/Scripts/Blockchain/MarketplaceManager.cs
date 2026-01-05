@@ -177,35 +177,62 @@ public class MarketplaceManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Lấy đường dẫn tuyệt đối tới file sell-item.html
+    /// Helper method để tìm file HTML (dùng chung logic với WithdrawManager)
     /// </summary>
-    private string GetSellItemHTMLPath()
+    private string GetHTMLPath(string relativePath)
     {
-        string fileName = Path.GetFileName(marketplaceWebPath); // "sell-item.html"
-        string folderName = Path.GetDirectoryName(marketplaceWebPath).Replace('\\', '/'); // "MarketplaceWeb"
+        string fileName = Path.GetFileName(relativePath); // "sell-item.html" hoặc "buy-item.html"
+        string folderName = Path.GetDirectoryName(relativePath).Replace('\\', '/'); // "BlockchainWeb"
         
+        // Ưu tiên tìm trong StreamingAssets trước (sau khi build)
         string[] possiblePaths = {
+            // 1. StreamingAssets/BlockchainWeb/ (sau khi build - ưu tiên cao nhất)
             Path.Combine(Application.streamingAssetsPath, folderName, fileName),
+            // 2. Build folder root/BlockchainWeb/ (nếu copy vào root build folder)
+            Path.Combine(Path.GetDirectoryName(Application.dataPath), folderName, fileName),
+            // 3. Application.dataPath/../BlockchainWeb/ (build folder)
             Path.Combine(Application.dataPath, "..", folderName, fileName),
-            Path.Combine(Application.dataPath, marketplaceWebPath),
-            Path.Combine(Application.dataPath, "..", marketplaceWebPath),
-            Path.Combine(Directory.GetCurrentDirectory(), marketplaceWebPath),
+            // 4. Trong editor: Assets/BlockchainWeb/
+            Path.Combine(Application.dataPath, relativePath),
+            Path.Combine(Application.dataPath, "..", relativePath),
+            // 5. Current directory
+            Path.Combine(Directory.GetCurrentDirectory(), relativePath),
             Path.Combine(Directory.GetCurrentDirectory(), folderName, fileName),
-            Path.Combine(Path.GetDirectoryName(Application.dataPath), folderName, fileName)
+            // 6. Executable directory (cho standalone builds)
+            Path.Combine(Path.GetDirectoryName(System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName), folderName, fileName),
+            // 7. Application.persistentDataPath (fallback)
+            Path.Combine(Application.persistentDataPath, folderName, fileName)
         };
 
         foreach (string path in possiblePaths)
         {
-            string normalizedPath = Path.GetFullPath(path);
-            if (File.Exists(normalizedPath))
+            try
             {
-                Debug.Log($"[MarketplaceManager] Tìm thấy sell-item.html tại: {normalizedPath}");
-                return normalizedPath;
+                string normalizedPath = Path.GetFullPath(path);
+                if (File.Exists(normalizedPath))
+                {
+                    Debug.Log($"[MarketplaceManager] ✅ Tìm thấy {fileName} tại: {normalizedPath}");
+                    return normalizedPath;
+                }
+            }
+            catch (System.Exception e)
+            {
+                // Bỏ qua path không hợp lệ
+                Debug.LogWarning($"[MarketplaceManager] Path không hợp lệ: {path} - {e.Message}");
             }
         }
 
-        Debug.LogWarning($"[MarketplaceManager] Không tìm thấy file sell-item.html!");
+        Debug.LogError($"[MarketplaceManager] ❌ Không tìm thấy file {fileName}!");
+        Debug.LogError($"[MarketplaceManager] ⚠️ Vui lòng đảm bảo copy BlockchainWeb folder vào StreamingAssets hoặc build folder!");
         return null;
+    }
+
+    /// <summary>
+    /// Lấy đường dẫn tuyệt đối tới file sell-item.html
+    /// </summary>
+    private string GetSellItemHTMLPath()
+    {
+        return GetHTMLPath(marketplaceWebPath);
     }
 
     /// <summary>
@@ -213,31 +240,7 @@ public class MarketplaceManager : MonoBehaviour
     /// </summary>
     private string GetBuyItemHTMLPath()
     {
-        string fileName = Path.GetFileName(buyItemWebPath); // "buy-item.html"
-        string folderName = Path.GetDirectoryName(buyItemWebPath).Replace('\\', '/'); // "MarketplaceWeb"
-        
-        string[] possiblePaths = {
-            Path.Combine(Application.streamingAssetsPath, folderName, fileName),
-            Path.Combine(Application.dataPath, "..", folderName, fileName),
-            Path.Combine(Application.dataPath, buyItemWebPath),
-            Path.Combine(Application.dataPath, "..", buyItemWebPath),
-            Path.Combine(Directory.GetCurrentDirectory(), buyItemWebPath),
-            Path.Combine(Directory.GetCurrentDirectory(), folderName, fileName),
-            Path.Combine(Path.GetDirectoryName(Application.dataPath), folderName, fileName)
-        };
-
-        foreach (string path in possiblePaths)
-        {
-            string normalizedPath = Path.GetFullPath(path);
-            if (File.Exists(normalizedPath))
-            {
-                Debug.Log($"[MarketplaceManager] Tìm thấy buy-item.html tại: {normalizedPath}");
-                return normalizedPath;
-            }
-        }
-
-        Debug.LogWarning($"[MarketplaceManager] Không tìm thấy file buy-item.html!");
-        return null;
+        return GetHTMLPath(buyItemWebPath);
     }
 
     /// <summary>

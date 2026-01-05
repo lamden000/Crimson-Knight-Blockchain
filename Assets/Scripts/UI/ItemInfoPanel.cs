@@ -18,6 +18,7 @@ public class ItemInfoPanel : MonoBehaviour
     [SerializeField] private TextMeshProUGUI useButtonText; // Text component của useButton để đổi text
     [SerializeField] private Image useButtonBackground; // Image background của useButton để đổi màu
     [SerializeField] private Button sellButton; // Button để bán item (chỉ hiện khi item từ wallet)
+    [SerializeField] private Button deleteButton; // Button để xóa item (chỉ hiện khi item từ inventory thường)
 
     private void Awake()
     {
@@ -85,6 +86,15 @@ public class ItemInfoPanel : MonoBehaviour
             }
         }
 
+        if (deleteButton == null)
+        {
+            Transform deleteTransform = transform.Find("DeleteButton");
+            if (deleteTransform != null)
+            {
+                deleteButton = deleteTransform.GetComponent<Button>();
+            }
+        }
+
         // Tự động tìm useButtonText và useButtonBackground
         if (useButton != null)
         {
@@ -126,6 +136,13 @@ public class ItemInfoPanel : MonoBehaviour
         {
             sellButton.onClick.RemoveAllListeners();
             sellButton.onClick.AddListener(OnSellButtonClicked);
+        }
+
+        // Setup delete button click
+        if (deleteButton != null)
+        {
+            deleteButton.onClick.RemoveAllListeners();
+            deleteButton.onClick.AddListener(OnDeleteButtonClicked);
         }
     }
 
@@ -261,6 +278,15 @@ public class ItemInfoPanel : MonoBehaviour
             bool shouldShowSell = isFromWallet && walletNFT != null && !string.IsNullOrEmpty(walletNFT.tokenId);
             sellButton.gameObject.SetActive(shouldShowSell);
             sellButton.interactable = shouldShowSell;
+        }
+
+        // Update delete button
+        // - Chỉ hiển thị khi item từ inventory thường (không phải wallet, không phải equipping)
+        if (deleteButton != null)
+        {
+            bool shouldShowDelete = !isFromWallet && !isFromEquipping;
+            deleteButton.gameObject.SetActive(shouldShowDelete);
+            deleteButton.interactable = shouldShowDelete;
         }
 
         // Hiển thị panel
@@ -564,11 +590,54 @@ public class ItemInfoPanel : MonoBehaviour
     }
 
     /// <summary>
+    /// Xử lý khi click delete button
+    /// </summary>
+    private void OnDeleteButtonClicked()
+    {
+        if (currentItemData == null)
+        {
+            Debug.LogWarning("[ItemInfoPanel] Cannot delete: currentItemData is null!");
+            return;
+        }
+
+        // Kiểm tra số lượng item
+        int currentQuantity = InventoryManager.Instance?.GetItemQuantity(currentItemData.itemID) ?? 0;
+        if (currentQuantity <= 0)
+        {
+            Debug.LogWarning("[ItemInfoPanel] Cannot delete: no items available!");
+            return;
+        }
+
+        // Xóa 1 item khỏi inventory
+        if (InventoryManager.Instance != null)
+        {
+            bool removed = InventoryManager.Instance.RemoveItem(currentItemData.itemID, 1);
+            if (removed)
+            {
+                Debug.Log($"[ItemInfoPanel] Đã xóa 1x {currentItemData.itemName} (ID: {currentItemData.itemID}) khỏi inventory");
+                
+                // Refresh inventory UI
+                if (InventoryUI.Instance != null)
+                {
+                    InventoryUI.Instance.RefreshInventoryUI();
+                }
+
+                // Ẩn panel sau khi xóa
+                Hide();
+            }
+            else
+            {
+                Debug.LogWarning("[ItemInfoPanel] Không thể xóa item!");
+            }
+        }
+    }
+
+    /// <summary>
     /// Callback khi withdraw được confirm
     /// </summary>
     private void OnWithdrawConfirmed(int itemID, int quantity, string walletAddress)
     {
-        // Xử lý withdraw logic ở đây (sẽ tích hợp blockchain sau)
+        // Xử lý withdraw logic ở đây
         Debug.Log($"[ItemInfoPanel] Withdrawing {quantity}x item {itemID} to wallet: {walletAddress}");
         
         if (InventoryManager.Instance == null || WithdrawManager.Instance == null)
@@ -590,14 +659,14 @@ public class ItemInfoPanel : MonoBehaviour
         {
             // Với coin, withdraw với quantity cụ thể
             WithdrawManager.Instance.WithdrawCoin(coinItem, quantity);
-            // Xóa coin khỏi inventory sau khi withdraw thành công (sẽ xóa sau khi mint thành công trên blockchain)
-            // Tạm thời xóa ngay để test
+            // Xóa coin khỏi inventory sau khi confirm
             InventoryManager.Instance.RemoveItem(itemID, quantity);
         }
         else
         {
             // Với NFT items, withdraw như bình thường
             WithdrawManager.Instance.WithdrawItem(itemID);
+            // Xóa item khỏi inventory sau khi confirm
             InventoryManager.Instance.RemoveItem(itemID, quantity);
         }
     }

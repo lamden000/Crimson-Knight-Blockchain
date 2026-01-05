@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sell Item - Marketplace</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-box.info {
+            border-left-color: #3498db;
+            background: #eef;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .wallet-info {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        .item-info {
+            background: #fff9e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            border-color: #d0d0d0;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .network-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 Sell Item</h1>
+        <p class="subtitle">List NFT trên marketplace để bán</p>
+
+        <div id="statusBox" class="status-box info">
+            <div class="status-text">Đang chờ kết nối MetaMask...</div>
+        </div>
+
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <strong>Địa chỉ ví:</strong>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="network-info" id="networkInfo"></div>
+        </div>
+
+        <div id="itemInfo" class="item-info" style="display: none;">
+            <strong>Thông tin Item:</strong>
+            <div style="margin-top: 10px;">
+                <div>Token ID: <strong id="tokenId">-</strong></div>
+                <div>Giá bán: <strong id="price">-</strong> GTK</div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="marketplaceAddress">Marketplace Contract:</label>
+            <input type="text" id="marketplaceAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <div class="form-group">
+            <label for="nftAddress">NFT Contract:</label>
+            <input type="text" id="nftAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <button id="connectBtn" onclick="connectWallet()">🔗 Kết nối MetaMask</button>
+        <button id="switchNetworkBtn" onclick="switchToAmoy()" disabled class="button-secondary" style="display: none;">🔄 Chuyển sang Polygon Amoy</button>
+        <button id="approveBtn" onclick="approveNFT()" disabled>✅ Approve NFT</button>
+        <button id="listBtn" onclick="listItem()" disabled>📝 List Item</button>
+    </div>
+
+    <script>
+        let web3;
+        let userAccount;
+        let marketplaceContract;
+        let nftContract;
+        let marketplaceAddress = '';
+        let nftAddress = '';
+        let tokenId = '';
+        let price = '';
+
+        // ABI của Marketplace contract
+        const MARKETPLACE_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"},
+                    {"internalType": "uint256", "name": "price", "type": "uint256"}
+                ],
+                "name": "listItem",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        // ABI của ERC721 (approve, ownerOf, getApproved)
+        const ERC721_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "address", "name": "to", "type": "address"},
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+                ],
+                "name": "approve",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+                ],
+                "name": "getApproved",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+                ],
+                "name": "ownerOf",
+                "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        // Lấy parameters từ URL
+        function getURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            
+            marketplaceAddress = params.get('marketplace') || '';
+            nftAddress = params.get('nft') || '';
+            tokenId = params.get('tokenId') || '';
+            price = params.get('price') || '';
+
+            // Clean addresses - remove any duplicates or invalid characters
+            // Fix duplicate address issue - if address appears twice, take only first 42 chars
+            marketplaceAddress = marketplaceAddress.trim();
+            if (marketplaceAddress.length > 42) {
+                // If address is duplicated (e.g., "0x123...0x123..."), take only first occurrence
+                const firstAddress = marketplaceAddress.substring(0, 42);
+                if (web3 && web3.utils && web3.utils.isAddress(firstAddress)) {
+                    marketplaceAddress = firstAddress;
+                } else {
+                    // Try to find valid address in the string
+                    const addressMatch = marketplaceAddress.match(/0x[a-fA-F0-9]{40}/);
+                    if (addressMatch) {
+                        marketplaceAddress = addressMatch[0];
+                    } else {
+                        marketplaceAddress = marketplaceAddress.substring(0, 42);
+                    }
+                }
+            }
+            nftAddress = nftAddress.trim();
+            if (nftAddress.length > 42) {
+                const addressMatch = nftAddress.match(/0x[a-fA-F0-9]{40}/);
+                if (addressMatch) {
+                    nftAddress = addressMatch[0];
+                } else {
+                    nftAddress = nftAddress.substring(0, 42);
+                }
+            }
+            
+            // Convert tokenId to hex if it's a number
+            if (tokenId) {
+                tokenId = convertTokenIdToHex(tokenId);
+            }
+
+            if (marketplaceAddress) {
+                // Remove any duplicate addresses
+                const uniqueAddress = marketplaceAddress.length > 42 ? marketplaceAddress.substring(0, 42) : marketplaceAddress;
+                document.getElementById('marketplaceAddress').value = uniqueAddress;
+                marketplaceAddress = uniqueAddress;
+            }
+            if (nftAddress) {
+                document.getElementById('nftAddress').value = nftAddress;
+            }
+            if (tokenId) {
+                // Display tokenId as int for user, but keep hex for contract calls
+                const tokenIdInt = parseInt(tokenId, 16);
+                document.getElementById('tokenId').textContent = tokenIdInt;
+                document.getElementById('itemInfo').style.display = 'block';
+            }
+            if (price) {
+                document.getElementById('price').textContent = price;
+            }
+        }
+
+        // Convert tokenId to hex format
+        function convertTokenIdToHex(tokenIdStr) {
+            if (!tokenIdStr) return '0x0';
+            
+            // If already hex format, return as is
+            if (tokenIdStr.startsWith('0x') || tokenIdStr.startsWith('0X')) {
+                return tokenIdStr;
+            }
+            
+            // If it's a number, convert to hex
+            const num = parseInt(tokenIdStr, 10);
+            if (!isNaN(num)) {
+                return '0x' + num.toString(16);
+            }
+            
+            // If it's already hex without prefix, add prefix
+            try {
+                parseInt(tokenIdStr, 16);
+                return '0x' + tokenIdStr;
+            } catch {
+                return '0x0';
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.querySelector('.status-text').textContent = message;
+        }
+
+        // Kết nối MetaMask
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask chưa được cài đặt!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Revoke permissions trước để force popup chọn tài khoản
+                try {
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (e) {
+                            console.log('Cannot revoke permissions:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.log('wallet_getPermissions not supported:', e);
+                }
+
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+
+                userAccount = accounts[0];
+                web3 = new Web3(window.ethereum);
+
+                document.getElementById('walletAddress').textContent = userAccount;
+                document.getElementById('walletInfo').style.display = 'block';
+
+                const chainId = await web3.eth.getChainId();
+                const networkNames = {
+                    1: 'Ethereum Mainnet',
+                    80002: 'Polygon Amoy Testnet',
+                    137: 'Polygon Mainnet'
+                };
+                const networkName = networkNames[chainId] || `Chain ID: ${chainId}`;
+                document.getElementById('networkInfo').textContent = `Network: ${networkName}`;
+
+                await ensureAmoyNetwork();
+
+                if (!marketplaceAddress || !nftAddress) {
+                    showStatus('⚠️ Contract addresses chưa được set từ game!', 'error');
+                    return;
+                }
+
+                // Clean addresses - remove any duplicates or invalid characters
+                // Fix duplicate address issue (sometimes address appears twice in URL params)
+                if (marketplaceAddress.length > 42) {
+                    // Try to find valid address in the string using regex
+                    const addressMatch = marketplaceAddress.match(/0x[a-fA-F0-9]{40}/);
+                    if (addressMatch) {
+                        marketplaceAddress = addressMatch[0];
+                    } else {
+                        // Fallback: take first 42 chars
+                        marketplaceAddress = marketplaceAddress.substring(0, 42);
+                    }
+                }
+                if (nftAddress.length > 42) {
+                    const addressMatch = nftAddress.match(/0x[a-fA-F0-9]{40}/);
+                    if (addressMatch) {
+                        nftAddress = addressMatch[0];
+                    } else {
+                        nftAddress = nftAddress.substring(0, 42);
+                    }
+                }
+
+                // Validate addresses before converting
+                if (!web3.utils.isAddress(marketplaceAddress)) {
+                    showStatus('❌ Marketplace address không hợp lệ!', 'error');
+                    return;
+                }
+                if (!web3.utils.isAddress(nftAddress)) {
+                    showStatus('❌ NFT address không hợp lệ!', 'error');
+                    return;
+                }
+                
+                marketplaceAddress = web3.utils.toChecksumAddress(marketplaceAddress);
+                nftAddress = web3.utils.toChecksumAddress(nftAddress);
+
+                marketplaceContract = new web3.eth.Contract(MARKETPLACE_ABI, marketplaceAddress);
+                nftContract = new web3.eth.Contract(ERC721_ABI, nftAddress);
+
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
+                document.getElementById('approveBtn').disabled = false;
+
+                const currentChainId = await web3.eth.getChainId();
+                if (currentChainId != 80002) {
+                    document.getElementById('switchNetworkBtn').style.display = 'block';
+                    document.getElementById('switchNetworkBtn').disabled = false;
+                } else {
+                    showStatus('✅ Đã kết nối!', 'success');
+                }
+
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                if (error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
+                } else {
+                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Chuyển sang Polygon Amoy
+        async function switchToAmoy() {
+            await ensureAmoyNetwork();
+        }
+
+        async function ensureAmoyNetwork() {
+            try {
+                const chainId = await web3.eth.getChainId();
+                if (chainId == 80002) return true;
+
+                showStatus('⏳ Đang chuyển sang Polygon Amoy...', 'info');
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x13882' }],
+                });
+                setTimeout(() => location.reload(), 1500);
+                return true;
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x13882',
+                            chainName: 'Polygon Amoy Testnet',
+                            nativeCurrency: { name: 'POL', symbol: 'POL', decimals: 18 },
+                            rpcUrls: ['https://rpc-amoy.polygon.technology'],
+                            blockExplorerUrls: ['https://www.oklink.com/amoy']
+                        }],
+                    });
+                    setTimeout(() => location.reload(), 1500);
+                    return true;
+                }
+                showStatus('❌ Không thể chuyển network.', 'error');
+                return false;
+            }
+        }
+
+        // Approve NFT
+        async function approveNFT() {
+            try {
+                if (!nftContract || !userAccount || !tokenId) {
+                    showStatus('❌ Vui lòng kết nối MetaMask và có tokenId!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang kiểm tra quyền sở hữu NFT...', 'info');
+                document.getElementById('approveBtn').disabled = true;
+                document.getElementById('approveBtn').innerHTML = '<span class="loading"></span>Đang kiểm tra...';
+
+                // Convert tokenId to proper format for contract calls
+                // TokenId có thể là hex string (0x...) hoặc decimal string
+                let tokenIdForContract;
+                if (tokenId.startsWith('0x') || tokenId.startsWith('0X')) {
+                    // Đã là hex format, dùng trực tiếp
+                    tokenIdForContract = tokenId;
+                } else {
+                    // Là decimal number, convert sang hex
+                    const num = parseInt(tokenId, 10);
+                    if (isNaN(num)) {
+                        showStatus('❌ TokenId không hợp lệ!', 'error');
+                        document.getElementById('approveBtn').disabled = false;
+                        document.getElementById('approveBtn').innerHTML = '✅ Approve NFT';
+                        return;
+                    }
+                    tokenIdForContract = '0x' + num.toString(16);
+                }
+
+                // Check if user owns the NFT
+                try {
+                    const owner = await nftContract.methods.ownerOf(tokenIdForContract).call();
+                    if (owner.toLowerCase() !== userAccount.toLowerCase()) {
+                        showStatus('❌ Bạn không sở hữu NFT này!', 'error');
+                        document.getElementById('approveBtn').disabled = false;
+                        document.getElementById('approveBtn').innerHTML = '✅ Approve NFT';
+                        return;
+                    }
+                } catch (ownerError) {
+                    console.error('Error checking owner:', ownerError);
+                    let errorMsg = '❌ Không thể kiểm tra quyền sở hữu NFT.';
+                    if (ownerError.message && ownerError.message.includes('ERC721: invalid token ID')) {
+                        errorMsg = '❌ TokenId không tồn tại!';
+                    } else if (ownerError.message) {
+                        errorMsg = `❌ Lỗi: ${ownerError.message}`;
+                    }
+                    showStatus(errorMsg, 'error');
+                    document.getElementById('approveBtn').disabled = false;
+                    document.getElementById('approveBtn').innerHTML = '✅ Approve NFT';
+                    return;
+                }
+
+                showStatus('⏳ Đang kiểm tra trạng thái approve...', 'info');
+
+                // Check if already approved
+                try {
+                    const approved = await nftContract.methods.getApproved(tokenIdForContract).call();
+                    if (approved.toLowerCase() === marketplaceAddress.toLowerCase()) {
+                        showStatus('✅ NFT đã được approve!', 'success');
+                        document.getElementById('listBtn').disabled = false;
+                        document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
+                        return;
+                    }
+                } catch (checkError) {
+                    console.log('Error checking approval status:', checkError);
+                    // Continue to approve anyway
+                }
+
+                showStatus('⏳ Đang ước tính gas...', 'info');
+
+                // Estimate gas first
+                let gasEstimate;
+                try {
+                    gasEstimate = await nftContract.methods.approve(marketplaceAddress, tokenIdForContract).estimateGas({
+                        from: userAccount
+                    });
+                    gasEstimate = Math.floor(gasEstimate * 1.2); // Add 20% buffer
+                } catch (estimateError) {
+                    console.error('Gas estimation error:', estimateError);
+                    gasEstimate = 100000; // Default gas limit
+                    showStatus('⚠️ Không thể estimate gas, dùng giá trị mặc định', 'info');
+                }
+
+                showStatus('⏳ Đang approve NFT... Vui lòng xác nhận trong MetaMask.', 'info');
+                document.getElementById('approveBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Prepare transaction parameters
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                // Try to use EIP-1559 gas pricing
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    const baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    const maxPriorityFeePerGas = web3.utils.toWei('2', 'gwei');
+                    const maxFeePerGas = web3.utils.toBN(baseFee).mul(web3.utils.toBN(2)).add(web3.utils.toBN(maxPriorityFeePerGas)).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                } catch (eip1559Error) {
+                    // Fallback to gasPrice
+                    try {
+                        txParams.gasPrice = await web3.eth.getGasPrice();
+                    } catch (gasPriceError) {
+                        txParams.gasPrice = web3.utils.toWei('30', 'gwei');
+                    }
+                }
+
+                // Approve NFT (use tokenId in hex format)
+                const tx = await nftContract.methods.approve(marketplaceAddress, tokenIdForContract).send(txParams);
+
+                showStatus(`✅ Đã approve NFT thành công! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('listBtn').disabled = false;
+                document.getElementById('approveBtn').innerHTML = '✅ Đã Approve';
+
+            } catch (error) {
+                console.error('Error approving NFT:', error);
+                document.getElementById('approveBtn').disabled = false;
+                document.getElementById('approveBtn').innerHTML = '✅ Approve NFT';
+                
+                // Parse error message
+                let errorMsg = '❌ Lỗi approve NFT!';
+                if (error.message) {
+                    if (error.message.includes('user rejected') || error.message.includes('User denied')) {
+                        errorMsg = '❌ Bạn đã từ chối giao dịch approve';
+                    } else if (error.message.includes('Internal JSON-RPC error')) {
+                        // Try to extract more details
+                        if (error.data) {
+                            errorMsg = `❌ Lỗi RPC: ${JSON.stringify(error.data)}`;
+                        } else if (error.message.includes('execution reverted')) {
+                            errorMsg = '❌ Transaction bị revert. Kiểm tra lại: bạn có sở hữu NFT này không?';
+                        } else {
+                            errorMsg = '❌ Lỗi RPC nội bộ. Có thể do: gas limit quá thấp, network không đúng, hoặc contract address sai.';
+                        }
+                    } else if (error.message.includes('execution reverted')) {
+                        errorMsg = '❌ Transaction bị revert. Kiểm tra lại quyền sở hữu NFT và contract addresses.';
+                    } else if (error.message.includes('insufficient funds')) {
+                        errorMsg = '❌ Không đủ POL để trả gas fee. Vui lòng nạp thêm POL vào ví.';
+                    } else {
+                        errorMsg = `❌ ${error.message}`;
+                    }
+                }
+                
+                showStatus(errorMsg, 'error');
+            }
+        }
+
+        // List item
+        async function listItem() {
+            try {
+                if (!marketplaceContract || !userAccount || !tokenId || !price) {
+                    showStatus('❌ Thiếu thông tin!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang list item...', 'info');
+                document.getElementById('listBtn').disabled = true;
+                document.getElementById('listBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Convert tokenId to hex if needed
+                let tokenIdForContract;
+                if (tokenId.startsWith('0x') || tokenId.startsWith('0X')) {
+                    tokenIdForContract = tokenId;
+                } else {
+                    const num = parseInt(tokenId, 10);
+                    if (isNaN(num)) {
+                        showStatus('❌ TokenId không hợp lệ!', 'error');
+                        document.getElementById('listBtn').disabled = false;
+                        document.getElementById('listBtn').innerHTML = '📝 List Item';
+                        return;
+                    }
+                    tokenIdForContract = '0x' + num.toString(16);
+                }
+                
+                // Convert price to wei (assuming price is in GTK tokens, 1 GTK = 10^18 wei)
+                const priceInWei = web3.utils.toWei(price, 'ether');
+
+                // Estimate gas for listItem
+                let gasEstimate;
+                try {
+                    gasEstimate = await marketplaceContract.methods.listItem(tokenIdForContract, priceInWei).estimateGas({
+                        from: userAccount
+                    });
+                    gasEstimate = Math.floor(gasEstimate * 1.2);
+                } catch (estimateError) {
+                    console.error('Gas estimation error:', estimateError);
+                    gasEstimate = 200000;
+                }
+
+                // Prepare transaction parameters
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                // Try to use EIP-1559 gas pricing
+                try {
+                    const block = await web3.eth.getBlock('latest');
+                    const baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    const maxPriorityFeePerGas = web3.utils.toWei('2', 'gwei');
+                    const maxFeePerGas = web3.utils.toBN(baseFee).mul(web3.utils.toBN(2)).add(web3.utils.toBN(maxPriorityFeePerGas)).toString();
+                    txParams.maxFeePerGas = maxFeePerGas;
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas;
+                } catch (eip1559Error) {
+                    try {
+                        txParams.gasPrice = await web3.eth.getGasPrice();
+                    } catch (gasPriceError) {
+                        txParams.gasPrice = web3.utils.toWei('30', 'gwei');
+                    }
+                }
+
+                const tx = await marketplaceContract.methods.listItem(tokenIdForContract, priceInWei).send(txParams);
+
+                showStatus(`✅ Đã list item thành công! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('listBtn').innerHTML = '✅ Đã List';
+
+            } catch (error) {
+                console.error('Error listing item:', error);
+                if (error.message && error.message.includes('user rejected')) {
+                    showStatus('❌ Bạn đã từ chối giao dịch list', 'error');
+                } else {
+                    showStatus(`❌ Lỗi list: ${error.message}`, 'error');
+                }
+                document.getElementById('listBtn').disabled = false;
+                document.getElementById('listBtn').innerHTML = '📝 List Item';
+            }
+        }
+
+        window.addEventListener('load', () => {
+            getURLParams();
+            if (window.location.protocol === 'file:') {
+                showStatus('⚠️ Đang chạy từ file:// - Vui lòng chạy qua HTTP server!', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
+
