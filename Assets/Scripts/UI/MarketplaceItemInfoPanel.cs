@@ -161,14 +161,33 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
         }
 
         // Update buy button
+        // Disable nếu item là của chính người chơi (seller address trùng với wallet address)
+        bool isOwnItem = false;
+        if (!string.IsNullOrEmpty(currentSellerAddress))
+        {
+            string playerWalletAddress = InventoryManager.Instance?.GetWalletAddress();
+            if (!string.IsNullOrEmpty(playerWalletAddress))
+            {
+                // So sánh address (case-insensitive, có thể có checksum)
+                isOwnItem = currentSellerAddress.Equals(playerWalletAddress, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
         if (buyButton != null)
         {
-            buyButton.interactable = true; // Enable buy button
+            buyButton.interactable = !isOwnItem; // Disable nếu là item của chính mình
         }
 
         if (buyButtonText != null)
         {
-            buyButtonText.text = "Buy";
+            if (isOwnItem)
+            {
+                buyButtonText.text = "Your Item";
+            }
+            else
+            {
+                buyButtonText.text = "Buy";
+            }
         }
     }
 

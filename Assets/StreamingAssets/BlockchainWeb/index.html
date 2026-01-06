@@ -357,10 +357,42 @@
                     return;
                 }
 
-                showStatus('⏳ Đang kết nối với MetaMask...', 'info');
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
 
-                // Yêu cầu kết nối
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Revoke permissions trước để force popup và cho phép user chọn account
+                try {
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (e) {
+                            console.log('Cannot revoke permissions');
+                        }
+                    }
+                } catch (e) {
+                    console.log('wallet_getPermissions not supported');
+                }
+
+                // Yêu cầu kết nối (sẽ hiện popup để user chọn account)
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+                
                 userAccount = accounts[0];
 
                 // Khởi tạo Web3
@@ -419,7 +451,7 @@
                 }
 
                 // Enable buttons
-                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
                 document.getElementById('checkBalanceBtn').disabled = false;
 
                 // Kiểm tra network và hiển thị nút chuyển network nếu cần
@@ -453,7 +485,16 @@
 
             } catch (error) {
                 console.error('Error connecting wallet:', error);
-                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                if (error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
+                } else {
+                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
             }
         }
 
@@ -726,8 +767,8 @@
             return true;
         }
 
-        // Auto-connect nếu đã kết nối trước đó
-        window.addEventListener('load', async () => {
+        // Load URL params khi trang load (không auto-connect)
+        window.addEventListener('load', () => {
             getURLParams();
             
             // Kiểm tra protocol
@@ -735,20 +776,8 @@
                 return;
             }
             
-            // Kiểm tra MetaMask
-            if (typeof window.ethereum !== 'undefined') {
-                try {
-                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-                    if (accounts.length > 0) {
-                        // Đã kết nối trước đó, tự động connect
-                        connectWallet();
-                    }
-                } catch (error) {
-                    console.error('Error checking accounts:', error);
-                }
-            } else {
-                showStatus('ℹ️ Vui lòng click "Kết nối MetaMask" để bắt đầu', 'info');
-            }
+            // Hiển thị message để user tự click button kết nối
+            showStatus('ℹ️ Vui lòng click "Kết nối MetaMask" để bắt đầu', 'info');
         });
     </script>
 </body>

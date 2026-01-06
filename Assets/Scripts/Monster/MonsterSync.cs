@@ -5,10 +5,12 @@ public class MonsterSync : MonoBehaviourPun, IPunObservable
 {
     Vector3 networkPos;
     Vector3 velocity;
+    private bool networkDataInitialized = false; // Flag để biết đã nhận data từ network chưa
 
     void Start()
     {
-        networkPos = transform.position;
+        // Không set networkPos ở đây nữa, sẽ được set từ network
+        // networkPos sẽ được set trong OnPhotonSerializeView lần đầu tiên
     }
 
     public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
@@ -29,6 +31,14 @@ public class MonsterSync : MonoBehaviourPun, IPunObservable
             {
                 networkPos = (Vector3)stream.ReceiveNext();
                 velocity = (Vector3)stream.ReceiveNext();
+
+                // Đánh dấu đã nhận data từ network
+                if (!networkDataInitialized)
+                {
+                    networkDataInitialized = true;
+                    // Set position ngay lập tức lần đầu tiên (không interpolate từ 0,0,0)
+                    transform.position = networkPos;
+                }
             }
         }
     }
@@ -38,7 +48,11 @@ public class MonsterSync : MonoBehaviourPun, IPunObservable
         // Only non-master interpolate position
         if (!PhotonNetwork.IsMasterClient)
         {
-            transform.position = Vector3.Lerp(transform.position, networkPos, Time.deltaTime * 10f);
+            // Chỉ interpolate nếu đã nhận data từ network (tránh interpolate từ 0,0,0)
+            if (networkDataInitialized)
+            {
+                transform.position = Vector3.Lerp(transform.position, networkPos, Time.deltaTime * 10f);
+            }
         }
     }
 

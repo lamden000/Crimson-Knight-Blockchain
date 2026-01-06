@@ -55,6 +55,7 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
 
     private CharacterSpriteDatabase database;
     Character character;
+    private bool isInitialized = false; // Flag để track xem đã khởi tạo xong chưa
 
     public Direction GetCurrentDirection()
     { return currentDir; }
@@ -100,8 +101,37 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
         LoadSprites();
         ApplyAppearanceFromProperties();
         
-        // Apply equipped items từ PlayFab (nếu có)
-        StartCoroutine(ApplyEquippedItemsFromPlayFab());
+        // Apply equipped items từ PlayFab (chỉ cho local player)
+        if (photonView != null && photonView.IsMine)
+        {
+            StartCoroutine(ApplyEquippedItemsFromPlayFab());
+        }
+        
+        // Đánh dấu đã khởi tạo xong
+        isInitialized = true;
+        
+        // Load lại tất cả part variants đã nhận từ network (nếu có) để đảm bảo sync đúng
+        // CHỈ reload cho remote players (local player đã có ApplyAppearanceFromProperties và ApplyEquippedItemsFromPlayFab)
+        if (photonView != null && !photonView.IsMine)
+        {
+            ReloadAllPartVariants();
+        }
+    }
+    
+    /// <summary>
+    /// Load lại tất cả part variants sau khi đã initialized
+    /// Đảm bảo các variants nhận từ network trước khi Start() chạy được load đúng
+    /// </summary>
+    private void ReloadAllPartVariants()
+    {
+        if (!isInitialized || database == null || character == null)
+            return;
+            
+        // Tạo copy của dictionary để tránh modify collection trong khi iterate
+        foreach (var kvp in partVariants.ToList())
+        {
+            LoadPart(kvp.Key, kvp.Value);
+        }
     }
 
     private void LateUpdate()
@@ -299,51 +329,80 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
 
     private void LoadPart(CharacterPart part, int variant)
     {
+        // Kiểm tra null để tránh crash khi chưa khởi tạo
+        if (database == null)
+        {
+            Debug.LogWarning($"[PlayerAnimationController] Cannot LoadPart: database is null. Part: {part}, Variant: {variant}");
+            return;
+        }
+
+        if (character == null)
+        {
+            Debug.LogWarning($"[PlayerAnimationController] Cannot LoadPart: character is null. Part: {part}, Variant: {variant}");
+            return;
+        }
+
         partVariants[part] = variant;
+        
+        // Kiểm tra spriteRenderer có null không
+        SpriteRenderer targetRenderer = null;
+        bool isWeaponPart = (part == CharacterPart.Sword || part == CharacterPart.Gun || 
+                            part == CharacterPart.Knive || part == CharacterPart.Staff);
+        
+        if (isWeaponPart)
+        {
+            // Weapon parts sử dụng weaponType
+            if (spriteRenderers.ContainsKey(weaponType) && spriteRenderers[weaponType] != null)
+            {
+                targetRenderer = spriteRenderers[weaponType];
+            }
+        }
+        else
+        {
+            // Các part khác
+            if (spriteRenderers.ContainsKey(part) && spriteRenderers[part] != null)
+            {
+                targetRenderer = spriteRenderers[part];
+            }
+        }
+
+        // Nếu không có renderer, chỉ load database (không set sprite)
+        if (targetRenderer == null)
+        {
+            Debug.LogWarning($"[PlayerAnimationController] SpriteRenderer is null for part: {part}. Loading database only.");
+        }
+        else
+        {
+            targetRenderer.sprite = null;
+        }
+
         switch (part)
         {
             case CharacterPart.Body:
-                spriteRenderers[CharacterPart.Body].sprite = null;
                 database.LoadBody(variant);
                 break;
             case CharacterPart.Legs:
-                spriteRenderers[CharacterPart.Legs].sprite = null;
                 database.LoadLegs(variant);
                 break;
             case CharacterPart.Head:
-                spriteRenderers[CharacterPart.Head].sprite = null;
                 database.LoadHead(variant);
                 break;
             case CharacterPart.Hair:
-                spriteRenderers[CharacterPart.Hair].sprite = null;
                 database.LoadHair(variant);
                 break;
             case CharacterPart.Hat:
-                spriteRenderers[CharacterPart.Hat].sprite = null;
                 database.LoadHat(variant);
                 break;
             case CharacterPart.Sword:
-                spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant,character.GetWeaponType());
-                break;
             case CharacterPart.Gun:
-                spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant, character.GetWeaponType());
-                break;
             case CharacterPart.Knive:
-                spriteRenderers[weaponType].sprite = null;
-                database.LoadWeapon(variant, character.GetWeaponType());
-                break;
             case CharacterPart.Staff:
-                spriteRenderers[weaponType].sprite = null;
                 database.LoadWeapon(variant, character.GetWeaponType());
                 break;
             case CharacterPart.Wings:
-                spriteRenderers[CharacterPart.Wings].sprite = null;
                 database.LoadWings(variant);
                 break;
             case CharacterPart.Eyes:
-                spriteRenderers[CharacterPart.Eyes].sprite = null;
                 database.LoadEyes(variant);
                 break;
         }
@@ -388,7 +447,12 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
                 if (partVariants[part] != variant)
                 {
                     partVariants[part] = variant;
-                    LoadPart(part, variant);
+                    // Chỉ load part nếu đã khởi tạo xong
+                    if (isInitialized)
+                    {
+                        LoadPart(part, variant);
+                    }
+                    // Nếu chưa initialized, sẽ được load trong Start() qua ApplyAppearanceFromProperties()
                 }
             }
         }
@@ -440,9 +504,16 @@ public class PlayerAnimationController : MonoBehaviourPunCallbacks, IPunObservab
 
     /// <summary>
     /// Apply equipped items từ PlayFab (sau khi inventory đã load)
+    /// CHỈ apply cho local player (photonView.IsMine)
     /// </summary>
     private System.Collections.IEnumerator ApplyEquippedItemsFromPlayFab()
     {
+        // CHỈ apply cho local player
+        if (photonView == null || !photonView.IsMine)
+        {
+            yield break;
+        }
+
         // Đợi InventoryManager load xong
         while (InventoryManager.Instance == null)
         {
