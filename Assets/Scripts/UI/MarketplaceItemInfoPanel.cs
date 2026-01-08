@@ -263,8 +263,11 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
             // Ẩn panel sau khi mở trang web
             Hide();
             
-            // Refresh marketplace UI sau một chút (để user có thời gian cancel trên blockchain)
-            StartCoroutine(DelayedRefreshMarketplace());
+            // Refresh marketplace UI sau một chút (chuyển sang MarketplaceUI để tránh lỗi khi GameObject inactive)
+            if (MarketplaceUI.Instance != null)
+            {
+                MarketplaceUI.Instance.StartCoroutine(MarketplaceUI.Instance.DelayedRefreshMarketplace());
+            }
         }
         else
         {
@@ -291,19 +294,6 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Coroutine để refresh marketplace UI sau một khoảng thời gian
-    /// </summary>
-    private System.Collections.IEnumerator DelayedRefreshMarketplace()
-    {
-        yield return new UnityEngine.WaitForSeconds(2f); // Đợi 2 giây
-        
-        // Refresh marketplace UI nếu có
-        if (MarketplaceUI.Instance != null)
-        {
-            MarketplaceUI.Instance.RefreshMarketplaceUI();
-        }
-    }
 
     /// <summary>
     /// Callback khi mua thành công

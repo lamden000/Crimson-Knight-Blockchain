@@ -223,7 +223,7 @@
         let tokenContract;
         let marketplaceAddress = '';
         let tokenAddress = '';
-        let tokenId = '';
+        let tokenId = null; // Sẽ là BigInt
         let price = '';
 
         // ABI của Marketplace contract
@@ -285,7 +285,7 @@
             
             marketplaceAddress = params.get('marketplace') || '';
             tokenAddress = params.get('token') || '';
-            tokenId = params.get('tokenId') || '';
+            let tokenIdParam = params.get('tokenId') || '';
             price = params.get('price') || '';
 
             if (marketplaceAddress) {
@@ -294,9 +294,28 @@
             if (tokenAddress) {
                 document.getElementById('tokenAddress').value = tokenAddress;
             }
-            if (tokenId) {
-                document.getElementById('tokenId').textContent = tokenId;
+            if (tokenIdParam) {
+                // Convert tokenId từ hex sang decimal để hiển thị
+                let tokenIdDecimal;
+                if (tokenIdParam.startsWith('0x') || tokenIdParam.startsWith('0X')) {
+                    // Nếu là hex, convert sang decimal
+                    tokenIdDecimal = BigInt(tokenIdParam).toString();
+                } else {
+                    // Nếu đã là decimal, giữ nguyên
+                    tokenIdDecimal = tokenIdParam;
+                }
+                
+                // Hiển thị dạng decimal
+                document.getElementById('tokenId').textContent = tokenIdDecimal;
                 document.getElementById('itemInfo').style.display = 'block';
+                
+                // Lưu tokenId dạng BigInt để dùng cho contract (cần uint256)
+                // Nếu là hex, dùng trực tiếp; nếu là decimal, convert sang BigInt
+                if (tokenIdParam.startsWith('0x') || tokenIdParam.startsWith('0X')) {
+                    tokenId = BigInt(tokenIdParam);
+                } else {
+                    tokenId = BigInt(tokenIdParam);
+                }
             }
             if (price) {
                 document.getElementById('price').textContent = price;
@@ -389,7 +408,8 @@
                 // Debug: Log addresses
                 console.log('Marketplace Address:', marketplaceAddress);
                 console.log('Token Address:', tokenAddress);
-                console.log('Token ID:', tokenId);
+                console.log('Token ID (BigInt):', tokenId ? tokenId.toString() : 'null');
+                console.log('Token ID (Decimal):', tokenId ? tokenId.toString() : 'null');
                 console.log('Price:', price);
 
                 marketplaceContract = new web3.eth.Contract(MARKETPLACE_ABI, marketplaceAddress);
@@ -737,7 +757,7 @@
         // Buy item
         async function buyItem() {
             try {
-                if (!marketplaceContract || !userAccount || !tokenId) {
+                if (!marketplaceContract || !userAccount || tokenId === null) {
                     showStatus('❌ Thiếu thông tin!', 'error');
                     return;
                 }
@@ -746,7 +766,7 @@
                 document.getElementById('buyBtn').disabled = true;
                 document.getElementById('buyBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
 
-                // Estimate gas cho buyItem transaction
+                // Estimate gas cho buyItem transaction (tokenId đã là BigInt)
                 let gasEstimate;
                 try {
                     gasEstimate = await marketplaceContract.methods.buyItem(tokenId).estimateGas({

@@ -465,6 +465,18 @@ public class MarketplaceUI : MonoBehaviour
         }
         Debug.Log($"[MarketplaceUI] Token Status: {message}");
     }
+
+    /// <summary>
+    /// Coroutine để refresh marketplace UI sau một khoảng thời gian
+    /// Public để có thể gọi từ MarketplaceItemInfoPanel
+    /// </summary>
+    public IEnumerator DelayedRefreshMarketplace()
+    {
+        yield return new WaitForSeconds(2f); // Đợi 2 giây
+        
+        // Refresh marketplace UI
+        RefreshMarketplaceUI();
+    }
 }
 
 /// <summary>
