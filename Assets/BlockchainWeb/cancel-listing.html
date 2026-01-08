@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancel Listing - Marketplace</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .status-box.error {
+            border-left-color: #e74c3c;
+            background: #fee;
+        }
+
+        .status-box.success {
+            border-left-color: #27ae60;
+            background: #efe;
+        }
+
+        .status-box.info {
+            border-left-color: #3498db;
+            background: #eef;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #333;
+            word-break: break-all;
+        }
+
+        .wallet-info {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #555;
+            word-break: break-all;
+            margin-top: 5px;
+        }
+
+        .item-info {
+            background: #ffe6e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #e74c3c;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #e74c3c;
+        }
+
+        input[readonly] {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            border-color: #d0d0d0;
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .button-secondary {
+            background: #6c757d;
+        }
+
+        .button-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .network-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚫 Hủy Bán Item</h1>
+        <p class="subtitle">Hủy listing item trên marketplace</p>
+
+        <div id="statusBox" class="status-box info">
+            <div class="status-text">Đang chờ kết nối MetaMask...</div>
+        </div>
+
+        <div id="walletInfo" class="wallet-info" style="display: none;">
+            <strong>Địa chỉ ví:</strong>
+            <div class="wallet-address" id="walletAddress"></div>
+            <div class="network-info" id="networkInfo"></div>
+        </div>
+
+        <div id="itemInfo" class="item-info" style="display: none;">
+            <strong>Token ID:</strong>
+            <div id="tokenId" style="font-family: 'Courier New', monospace; font-size: 12px; margin-top: 5px;"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="marketplaceAddress">Marketplace Contract:</label>
+            <input type="text" id="marketplaceAddress" placeholder="0x..." value="" readonly>
+        </div>
+
+        <button id="connectBtn" onclick="connectWallet()">🔗 Kết nối MetaMask</button>
+        <button id="switchNetworkBtn" onclick="switchToAmoy()" disabled class="button-secondary" style="display: none;">🔄 Chuyển sang Polygon Amoy</button>
+        <button id="cancelBtn" onclick="cancelListing()" disabled>🚫 Hủy Bán</button>
+    </div>
+
+    <script>
+        let web3;
+        let userAccount;
+        let marketplaceContract;
+        let marketplaceAddress = '';
+        let tokenId = '';
+
+        // ABI của Marketplace contract - chỉ cần cancelListing
+        const MARKETPLACE_ABI = [
+            {
+                "inputs": [
+                    {"internalType": "uint256", "name": "tokenId", "type": "uint256"}
+                ],
+                "name": "cancelListing",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }
+        ];
+
+        // Lấy parameters từ URL
+        function getURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            
+            marketplaceAddress = params.get('marketplace') || '';
+            tokenId = params.get('tokenId') || '';
+
+            if (marketplaceAddress) {
+                document.getElementById('marketplaceAddress').value = marketplaceAddress;
+            }
+            if (tokenId) {
+                document.getElementById('tokenId').textContent = tokenId;
+                document.getElementById('itemInfo').style.display = 'block';
+            }
+        }
+
+        function showStatus(message, type = 'info') {
+            const statusBox = document.getElementById('statusBox');
+            statusBox.className = `status-box ${type}`;
+            statusBox.querySelector('.status-text').textContent = message;
+        }
+
+        // Kết nối MetaMask
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask chưa được cài đặt!', 'error');
+                    return;
+                }
+
+                showStatus('⏳ Đang yêu cầu kết nối MetaMask... Vui lòng xác nhận trong popup MetaMask.', 'info');
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('connectBtn').innerHTML = '<span class="loading"></span>Đang chờ xác nhận...';
+
+                // Revoke permissions trước để force popup chọn tài khoản
+                try {
+                    const permissions = await window.ethereum.request({
+                        method: 'wallet_getPermissions'
+                    });
+                    
+                    if (permissions && permissions.length > 0) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_revokePermissions',
+                                params: [{ eth_accounts: {} }]
+                            });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        } catch (e) {
+                            console.log('Cannot revoke permissions:', e);
+                        }
+                    }
+                } catch (e) {
+                    console.log('wallet_getPermissions not supported:', e);
+                }
+
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                if (accounts.length === 0) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                    return;
+                }
+
+                userAccount = accounts[0];
+                web3 = new Web3(window.ethereum);
+
+                document.getElementById('walletAddress').textContent = userAccount;
+                document.getElementById('walletInfo').style.display = 'block';
+
+                const chainId = await web3.eth.getChainId();
+                const networkNames = {
+                    1: 'Ethereum Mainnet',
+                    80002: 'Polygon Amoy Testnet',
+                    137: 'Polygon Mainnet'
+                };
+                const networkName = networkNames[chainId] || `Chain ID: ${chainId}`;
+                document.getElementById('networkInfo').textContent = `Network: ${networkName}`;
+
+                await ensureAmoyNetwork();
+
+                if (!marketplaceAddress) {
+                    showStatus('⚠️ Marketplace address chưa được set từ game!', 'error');
+                    return;
+                }
+
+                // Validate address
+                if (!web3.utils.isAddress(marketplaceAddress)) {
+                    showStatus(`❌ Marketplace address không hợp lệ: ${marketplaceAddress}`, 'error');
+                    return;
+                }
+
+                marketplaceAddress = web3.utils.toChecksumAddress(marketplaceAddress);
+
+                console.log('Marketplace Address:', marketplaceAddress);
+                console.log('Token ID:', tokenId);
+
+                marketplaceContract = new web3.eth.Contract(MARKETPLACE_ABI, marketplaceAddress);
+
+                // Enable cancel button
+                document.getElementById('connectBtn').innerHTML = '🔗 Đã kết nối';
+                document.getElementById('cancelBtn').disabled = false;
+
+                // Check network
+                if (chainId != 80002) {
+                    document.getElementById('switchNetworkBtn').style.display = 'block';
+                    document.getElementById('switchNetworkBtn').disabled = false;
+                    document.getElementById('cancelBtn').disabled = true;
+                    showStatus(`⚠️ Đang ở network khác (Chain ID: ${chainId}). Vui lòng chuyển sang Polygon Amoy (80002)`, 'error');
+                } else {
+                    document.getElementById('switchNetworkBtn').style.display = 'none';
+                    showStatus(`✅ Đã kết nối! Địa chỉ: ${userAccount.substring(0, 6)}...${userAccount.substring(38)}`, 'success');
+                }
+
+                // Listen for account changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length === 0) {
+                        showStatus('⚠️ MetaMask đã bị ngắt kết nối', 'error');
+                        location.reload();
+                    } else {
+                        userAccount = accounts[0];
+                        document.getElementById('walletAddress').textContent = userAccount;
+                        showStatus('✅ Đã chuyển đổi tài khoản', 'success');
+                    }
+                });
+
+                // Listen for network changes
+                window.ethereum.on('chainChanged', () => {
+                    location.reload();
+                });
+
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').innerHTML = '🔗 Kết nối MetaMask';
+                
+                if (error.code === 4001) {
+                    showStatus('❌ Bạn đã từ chối kết nối MetaMask. Vui lòng click lại để thử.', 'error');
+                } else if (error.code === -32002) {
+                    showStatus('⏳ Đang chờ xác nhận từ MetaMask...', 'info');
+                } else {
+                    showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Chuyển sang Polygon Amoy
+        async function switchToAmoy() {
+            await ensureAmoyNetwork();
+        }
+
+        async function ensureAmoyNetwork() {
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showStatus('❌ MetaMask không khả dụng!', 'error');
+                    return false;
+                }
+
+                const chainId = await web3.eth.getChainId();
+                const amoyChainId = '0x13882'; // 80002 in hex
+
+                if (chainId == 80002) {
+                    return true;
+                }
+
+                showStatus('⏳ Đang chuyển sang Polygon Amoy Testnet...', 'info');
+
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: amoyChainId }],
+                    });
+                    showStatus('✅ Đã chuyển sang Polygon Amoy Testnet', 'success');
+                    
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1500);
+                    return true;
+                } catch (switchError) {
+                    if (switchError.code === 4902) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [
+                                    {
+                                        chainId: amoyChainId,
+                                        chainName: 'Polygon Amoy Testnet',
+                                        nativeCurrency: {
+                                            name: 'POL',
+                                            symbol: 'POL',
+                                            decimals: 18
+                                        },
+                                        rpcUrls: ['https://rpc-amoy.polygon.technology'],
+                                        blockExplorerUrls: ['https://www.oklink.com/amoy']
+                                    }
+                                ],
+                            });
+                            showStatus('✅ Đã thêm và chuyển sang Polygon Amoy Testnet', 'success');
+                            
+                            setTimeout(() => {
+                                location.reload();
+                            }, 1500);
+                            return true;
+                        } catch (addError) {
+                            console.error('Error adding network:', addError);
+                            showStatus('❌ Không thể thêm Polygon Amoy network. Vui lòng thêm thủ công trong MetaMask.', 'error');
+                            return false;
+                        }
+                    } else if (switchError.code === 4001) {
+                        showStatus('❌ Bạn đã từ chối chuyển network', 'error');
+                        return false;
+                    } else {
+                        console.error('Error switching network:', switchError);
+                        showStatus('❌ Không thể chuyển network. Vui lòng chuyển thủ công sang Polygon Amoy trong MetaMask.', 'error');
+                        return false;
+                    }
+                }
+            } catch (error) {
+                console.error('Error ensuring Amoy network:', error);
+                showStatus(`❌ Lỗi: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        // Hủy listing
+        async function cancelListing() {
+            try {
+                if (!marketplaceContract || !userAccount) {
+                    showStatus('❌ Vui lòng kết nối MetaMask trước!', 'error');
+                    return;
+                }
+
+                if (!tokenId) {
+                    showStatus('❌ Token ID chưa được set từ game!', 'error');
+                    return;
+                }
+
+                // Đảm bảo đang ở đúng network
+                const chainId = await web3.eth.getChainId();
+                if (chainId != 80002) {
+                    showStatus('⚠️ Vui lòng chuyển sang Polygon Amoy Testnet trước!', 'error');
+                    document.getElementById('cancelBtn').innerHTML = '🚫 Hủy Bán';
+                    document.getElementById('cancelBtn').disabled = false;
+                    return;
+                }
+
+                showStatus('⏳ Đang ước tính gas...', 'info');
+                document.getElementById('cancelBtn').disabled = true;
+                document.getElementById('cancelBtn').innerHTML = '<span class="loading"></span>Đang xử lý...';
+
+                // Convert tokenId to BigInt
+                const tokenIdBigInt = BigInt(tokenId.startsWith('0x') ? tokenId : `0x${parseInt(tokenId).toString(16)}`);
+
+                // Estimate gas
+                let gasEstimate;
+                try {
+                    gasEstimate = await marketplaceContract.methods.cancelListing(tokenIdBigInt).estimateGas({
+                        from: userAccount
+                    });
+                    console.log('Gas estimate for cancelListing:', gasEstimate);
+                    // Thêm 30% buffer
+                    gasEstimate = Math.floor(Number(gasEstimate) * 1.3);
+                } catch (estimateError) {
+                    console.error('Gas estimation error:', estimateError);
+                    gasEstimate = 100000; // Default gas limit
+                    showStatus('⚠️ Không thể estimate gas, dùng giá trị mặc định', 'info');
+                }
+
+                // Check balance
+                try {
+                    const balance = await web3.eth.getBalance(userAccount);
+                    const gasPrice = await web3.eth.getGasPrice();
+                    const gasCost = BigInt(gasEstimate) * BigInt(gasPrice);
+                    if (BigInt(balance) < gasCost) {
+                        showStatus('❌ Không đủ POL để trả gas fee!', 'error');
+                        document.getElementById('cancelBtn').innerHTML = '🚫 Hủy Bán';
+                        document.getElementById('cancelBtn').disabled = false;
+                        return;
+                    }
+                } catch (balanceError) {
+                    console.warn('Could not check balance:', balanceError);
+                }
+
+                // Setup gas parameters (EIP-1559 hoặc gasPrice)
+                let txParams = {
+                    from: userAccount,
+                    gas: gasEstimate
+                };
+
+                try {
+                    // Thử dùng EIP-1559
+                    const block = await web3.eth.getBlock('latest');
+                    const baseFee = block.baseFeePerGas || await web3.eth.getGasPrice();
+                    
+                    // Priority fee cao để đảm bảo transaction được xử lý
+                    const maxPriorityFeePerGas = BigInt(web3.utils.toWei('30', 'gwei'));
+                    // Max fee = baseFee * 5 + priority fee (cao để match "Cao" option trong MetaMask)
+                    const baseFeeBigInt = BigInt(baseFee);
+                    const maxFeePerGas = baseFeeBigInt * BigInt(5) + maxPriorityFeePerGas;
+                    
+                    txParams.maxFeePerGas = maxFeePerGas.toString();
+                    txParams.maxPriorityFeePerGas = maxPriorityFeePerGas.toString();
+                    
+                    console.log('Using EIP-1559 for cancelListing:', {
+                        maxFeePerGas: web3.utils.fromWei(maxFeePerGas.toString(), 'gwei') + ' gwei',
+                        maxPriorityFeePerGas: web3.utils.fromWei(maxPriorityFeePerGas.toString(), 'gwei') + ' gwei'
+                    });
+                } catch (eip1559Error) {
+                    // Fallback về gasPrice
+                    console.warn('EIP-1559 not supported, using gasPrice:', eip1559Error);
+                    try {
+                        const networkGasPrice = await web3.eth.getGasPrice();
+                        txParams.gasPrice = (BigInt(networkGasPrice) * BigInt(200) / BigInt(100)).toString(); // 200% của network gas price
+                        console.log('Using gasPrice for cancelListing (200% of network):', txParams.gasPrice);
+                    } catch (gasPriceError) {
+                        txParams.gasPrice = web3.utils.toWei('100', 'gwei'); // Default cao
+                        console.log('Using default gasPrice for cancelListing: 100 gwei');
+                    }
+                }
+
+                // Dry run để check revert
+                try {
+                    await marketplaceContract.methods.cancelListing(tokenIdBigInt).call({
+                        from: userAccount
+                    });
+                    console.log('✅ Call successful - transaction should work');
+                } catch (callError) {
+                    console.error('❌ Call failed - transaction will revert:', callError);
+                    showStatus(`❌ Transaction sẽ bị revert: ${callError.message}`, 'error');
+                    document.getElementById('cancelBtn').innerHTML = '🚫 Hủy Bán';
+                    document.getElementById('cancelBtn').disabled = false;
+                    return;
+                }
+
+                showStatus('⏳ Đang gửi giao dịch...', 'info');
+
+                // Send cancelListing transaction
+                const tx = await marketplaceContract.methods.cancelListing(tokenIdBigInt).send(txParams);
+
+                showStatus(`✅ Hủy bán thành công! Transaction: ${tx.transactionHash}`, 'success');
+                document.getElementById('cancelBtn').innerHTML = '🚫 Hủy Bán';
+                document.getElementById('cancelBtn').disabled = false;
+
+            } catch (error) {
+                console.error('Error canceling listing:', error);
+                
+                let errorMsg = '❌ Lỗi khi hủy bán!';
+                
+                if (error.message) {
+                    if (error.message.includes('user rejected') || error.message.includes('User denied')) {
+                        errorMsg = '❌ Bạn đã từ chối giao dịch';
+                    } else if (error.message.includes('Internal JSON-RPC error')) {
+                        errorMsg = '❌ Lỗi RPC nội bộ. Có thể do gas limit quá thấp hoặc network không đúng.';
+                    } else if (error.message.includes('execution reverted')) {
+                        errorMsg = '❌ Transaction bị revert. Kiểm tra lại bạn có phải là seller của item này không.';
+                    } else if (error.message.includes('insufficient funds')) {
+                        errorMsg = '❌ Không đủ POL để trả gas fee. Vui lòng nạp thêm POL vào ví.';
+                    } else {
+                        errorMsg = `❌ ${error.message}`;
+                    }
+                }
+
+                showStatus(errorMsg, 'error');
+                document.getElementById('cancelBtn').innerHTML = '🚫 Hủy Bán';
+                document.getElementById('cancelBtn').disabled = false;
+            }
+        }
+
+        // Load URL params khi trang load
+        window.addEventListener('load', () => {
+            getURLParams();
+            
+            if (window.location.protocol === 'file:') {
+                showStatus('⚠️ Đang chạy từ file:// - MetaMask có thể không hoạt động! Vui lòng chạy qua HTTP server.', 'error');
+            } else {
+                showStatus('ℹ️ Vui lòng click "Kết nối MetaMask" để bắt đầu', 'info');
+            }
+        });
+    </script>
+</body>
+</html>
+

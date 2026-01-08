@@ -22,6 +22,7 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
     private ItemData currentItemData;
     private string currentPrice;
     private string currentSellerAddress;
+    private bool isOwnItem = false; // Flag để biết item có phải của chính người chơi không
 
     private void Awake()
     {
@@ -161,8 +162,8 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
         }
 
         // Update buy button
-        // Disable nếu item là của chính người chơi (seller address trùng với wallet address)
-        bool isOwnItem = false;
+        // Kiểm tra nếu item là của chính người chơi (seller address trùng với wallet address)
+        isOwnItem = false;
         if (!string.IsNullOrEmpty(currentSellerAddress))
         {
             string playerWalletAddress = InventoryManager.Instance?.GetWalletAddress();
@@ -175,14 +176,37 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
 
         if (buyButton != null)
         {
-            buyButton.interactable = !isOwnItem; // Disable nếu là item của chính mình
+            buyButton.interactable = true; // Luôn enable (có thể là Buy hoặc Cancel)
+            
+            // Đổi màu button thành đỏ nếu là item của chính mình
+            if (isOwnItem)
+            {
+                var colors = buyButton.colors;
+                colors.normalColor = new Color(0.9f, 0.2f, 0.2f, 1f); // Đỏ
+                colors.highlightedColor = new Color(0.8f, 0.15f, 0.15f, 1f);
+                colors.pressedColor = new Color(0.7f, 0.1f, 0.1f, 1f);
+                colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+                colors.selectedColor = new Color(0.9f, 0.2f, 0.2f, 1f);
+                buyButton.colors = colors;
+            }
+            else
+            {
+                // Reset về màu mặc định (xanh/tím)
+                var colors = buyButton.colors;
+                colors.normalColor = new Color(0.4f, 0.5f, 0.9f, 1f); // Xanh/tím
+                colors.highlightedColor = new Color(0.35f, 0.45f, 0.85f, 1f);
+                colors.pressedColor = new Color(0.3f, 0.4f, 0.8f, 1f);
+                colors.disabledColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+                colors.selectedColor = new Color(0.4f, 0.5f, 0.9f, 1f);
+                buyButton.colors = colors;
+            }
         }
 
         if (buyButtonText != null)
         {
             if (isOwnItem)
             {
-                buyButtonText.text = "Your Item";
+                buyButtonText.text = "Hủy bán";
             }
             else
             {
@@ -203,13 +227,13 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
     }
 
     /// <summary>
-    /// Xử lý khi click Buy button
+    /// Xử lý khi click Buy button (hoặc Cancel button nếu là item của chính mình)
     /// </summary>
     private void OnBuyButtonClicked()
     {
         if (string.IsNullOrEmpty(currentTokenId))
         {
-            Debug.LogError("[MarketplaceItemInfoPanel] Cannot buy item: tokenId is null or empty!");
+            Debug.LogError("[MarketplaceItemInfoPanel] Cannot process: tokenId is null or empty!");
             return;
         }
 
@@ -230,25 +254,55 @@ public class MarketplaceItemInfoPanel : MonoBehaviour
             buyButtonText.text = "Processing...";
         }
 
-        // Lấy price từ MarketplaceDataManager
-        if (MarketplaceDataManager.Instance == null)
+        // Nếu là item của chính mình → hủy listing
+        if (isOwnItem)
         {
-            OnBuyFailed("MarketplaceDataManager chưa được khởi tạo!");
-            return;
+            // Gọi MarketplaceManager để hủy listing
+            MarketplaceManager.Instance.CancelListing(currentTokenId);
+            
+            // Ẩn panel sau khi mở trang web
+            Hide();
+            
+            // Refresh marketplace UI sau một chút (để user có thời gian cancel trên blockchain)
+            StartCoroutine(DelayedRefreshMarketplace());
         }
-
-        var listings = MarketplaceDataManager.Instance.GetAllListings();
-        if (!listings.ContainsKey(currentTokenId))
+        else
         {
-            OnBuyFailed("Item không còn trong marketplace!");
-            return;
+            // Mua item (logic cũ)
+            // Lấy price từ MarketplaceDataManager
+            if (MarketplaceDataManager.Instance == null)
+            {
+                OnBuyFailed("MarketplaceDataManager chưa được khởi tạo!");
+                return;
+            }
+
+            var listings = MarketplaceDataManager.Instance.GetAllListings();
+            if (!listings.ContainsKey(currentTokenId))
+            {
+                OnBuyFailed("Item không còn trong marketplace!");
+                return;
+            }
+
+            var listing = listings[currentTokenId];
+            string price = listing.priceInGTK.ToString("F2");
+
+            // Gọi MarketplaceManager để mua item
+            MarketplaceManager.Instance.BuyItem(currentTokenId, OnBuySuccess, OnBuyFailed);
         }
+    }
 
-        var listing = listings[currentTokenId];
-        string price = listing.priceInGTK.ToString("F2");
-
-        // Gọi MarketplaceManager để mua item
-        MarketplaceManager.Instance.BuyItem(currentTokenId, OnBuySuccess, OnBuyFailed);
+    /// <summary>
+    /// Coroutine để refresh marketplace UI sau một khoảng thời gian
+    /// </summary>
+    private System.Collections.IEnumerator DelayedRefreshMarketplace()
+    {
+        yield return new UnityEngine.WaitForSeconds(2f); // Đợi 2 giây
+        
+        // Refresh marketplace UI nếu có
+        if (MarketplaceUI.Instance != null)
+        {
+            MarketplaceUI.Instance.RefreshMarketplaceUI();
+        }
     }
 
     /// <summary>

@@ -15,6 +15,7 @@ public class MarketplaceManager : MonoBehaviour
     [SerializeField] private string gameTokenContractAddress = ""; // Địa chỉ GameToken contract (để thanh toán)
     [SerializeField] private string marketplaceWebPath = "BlockchainWeb/sell-item.html"; // Đường dẫn tới file HTML bán
     [SerializeField] private string buyItemWebPath = "BlockchainWeb/buy-item.html"; // Đường dẫn tới file HTML mua
+    [SerializeField] private string cancelListingWebPath = "BlockchainWeb/cancel-listing.html"; // Đường dẫn tới file HTML hủy listing
     [SerializeField] private bool useLocalhost = true; // Sử dụng localhost:8000 thay vì file://
     [SerializeField] private int localhostPort = 8000; // Port cho localhost server
 
@@ -312,6 +313,74 @@ public class MarketplaceManager : MonoBehaviour
             MarketplacePlayFabManager.Instance.RemoveListing(tokenId);
             Debug.Log($"[MarketplaceManager] Đã cancel listing trong PlayFab: TokenId={tokenId}");
         }
+    }
+
+    /// <summary>
+    /// Hủy listing một item (mở trang web để ký transaction)
+    /// </summary>
+    /// <param name="tokenId">Token ID của NFT muốn hủy listing</param>
+    public void CancelListing(string tokenId)
+    {
+        if (string.IsNullOrEmpty(tokenId))
+        {
+            Debug.LogError("[MarketplaceManager] TokenId không được để trống!");
+            return;
+        }
+
+        // Mở trang web để hủy listing
+        OpenCancelListingPage(tokenId);
+    }
+
+    /// <summary>
+    /// Mở trang hủy listing trong trình duyệt
+    /// </summary>
+    /// <param name="tokenId">Token ID của NFT muốn hủy listing</param>
+    public void OpenCancelListingPage(string tokenId)
+    {
+        string htmlPath = GetCancelListingHTMLPath();
+        
+        if (string.IsNullOrEmpty(htmlPath))
+        {
+            Debug.LogError("[MarketplaceManager] Không tìm thấy file cancel-listing.html!");
+            return;
+        }
+
+        // Validate contract addresses
+        if (string.IsNullOrEmpty(marketplaceContractAddress))
+        {
+            Debug.LogError("[MarketplaceManager] Marketplace Contract Address chưa được set!");
+            return;
+        }
+
+        // Tạo URL
+        string url;
+        if (useLocalhost)
+        {
+            url = $"http://localhost:{localhostPort}/cancel-listing.html";
+            Debug.Log($"[MarketplaceManager] Sử dụng localhost. Đảm bảo HTTP server đang chạy tại port {localhostPort}!");
+        }
+        else
+        {
+            string normalizedPath = htmlPath.Replace('\\', '/');
+            url = $"file:///{normalizedPath}";
+            Debug.LogWarning($"[MarketplaceManager] Đang dùng file:// - MetaMask có thể không hoạt động trên Chrome!");
+        }
+
+        // Thêm parameters với URL encoding để tránh lỗi
+        url += $"?marketplace={UnityEngine.Networking.UnityWebRequest.EscapeURL(marketplaceContractAddress)}&tokenId={UnityEngine.Networking.UnityWebRequest.EscapeURL(tokenId)}";
+
+        Debug.Log($"[MarketplaceManager] Mở trình duyệt để hủy listing: {url}");
+
+        // Mở trình duyệt
+        Application.OpenURL(url);
+    }
+
+    /// <summary>
+    /// Lấy đường dẫn tuyệt đối tới file cancel-listing.html
+    /// </summary>
+    private string GetCancelListingHTMLPath()
+    {
+        return GetHTMLPath(cancelListingWebPath);
     }
 }
 
